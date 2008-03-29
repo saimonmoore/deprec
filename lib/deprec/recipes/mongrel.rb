@@ -24,7 +24,6 @@ Capistrano::Configuration.instance(:must_exist).load do
       task :install, :roles => :app do
         gem2.select 'mongrel'                # mongrel requires we select a version
         gem2.install 'mongrel_cluster'
-        gem2.install 'swiftiply'
       end
     
     
