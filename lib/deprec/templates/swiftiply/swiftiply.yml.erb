@@ -1,0 +1,11 @@
+cluster_address: 127.0.0.1
+cluster_port: <%= swiftiply_port %>
+daemonize: true
+epoll: true
+epoll_descriptors: 8192
+map:
+  - incoming: <%= domain %>
+    outgoing: <%= thin_address %>:<%= thin_port.to_s %>
+    default: true
+    docroot: /var/www/apps/<%= application %>/current/public
+    redeployable: false
