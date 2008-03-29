@@ -24,12 +24,6 @@ Capistrano::Configuration.instance(:must_exist).load do
       task :install, :roles => :app do
         gem2.select 'mongrel'                # mongrel requires we select a version
         gem2.install 'mongrel_cluster'
-        gem2.install 'swiftiply'
-        symlink_mongrel_rails
-      end
-      
-      task :symlink_mongrel_rails, :roles => :app do
-        sudo "ln -sf /usr/local/bin/mongrel_rails /usr/bin/mongrel_rails"
       end
       
       task :symlink_logrotate_config, :roles => :web do
