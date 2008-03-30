@@ -2,7 +2,7 @@ require 'rubygems'
 
 SPEC = Gem::Specification.new do |spec|
   spec.name = 'deprec'
-  spec.author = 'Mike Bailey'
+  spec.author = 'Mike Bailey [rev. Paul Reimer]'
   spec.email = 'mike@bailey.net.au'
   spec.homepage = 'http://www.deprec.org/'
   spec.rubyforge_project = 'deprec'
