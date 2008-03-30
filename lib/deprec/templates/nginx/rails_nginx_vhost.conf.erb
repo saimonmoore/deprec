@@ -1,12 +1,10 @@
 upstream <%= application %> {
-<% mongrel_servers.times do |counter| -%>
-  <%= "server 127.0.0.1:#{mongrel_port+counter};"  %>
-<% end -%>
+  server 127.0.0.1:9000;
 }
 
 server {
     listen       80;
-    server_name  <%= domain %> <% 4.times do |counter| %> <%= domain.sub(/.*?\./, "assets#{counter}.") %><% end %>;
+    server_name  <%= domain %>;
     root <%= deploy_to %>/current/public;
     access_log <%= deploy_to %>/shared/log/<%= domain %>-access.log;
     error_log <%= deploy_to %>/shared/log/<%= domain %>-error.log;
@@ -38,4 +36,10 @@ server {
         location = /50x.html {
                 root   html;
         }
+        
+        # Tuning Parameters
+      	location ~* ^.+\.(jpe?g|gif|css|png|js|ico|html|ico|zip|tgz|gz|rar|bz2|doc|xls|exe|pdf|ppt|txt|tar|mid|midi|wav|bmp|rtf|mov)$ {
+      	  expires 60d;
+      	  access_log off;
+      	}
 }
