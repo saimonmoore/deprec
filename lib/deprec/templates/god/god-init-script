@@ -1,0 +1,71 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides: god
+# Default-Start:  2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: start and stop god
+# Description: monitoring by god.
+### END INIT INFO
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DESC="monitoring daemon"
+NAME=god
+DAEMON=/usr/local/bin/$NAME
+CONFIGFILEDIR=/etc/god
+PIDFILE=/var/run/god/$NAME.pid
+LOGFILE=/var/log/god.log
+SCRIPTNAME=/etc/init.d/$NAME
+
+# Check if DAEMON binary exist
+test -f $DAEMON || exit 0
+
+ARGS="-l $LOGFILE"
+
+RETVAL=0
+set -e
+
+d_start() {
+start-stop-daemon --start --quiet --pidfile /var/run/$NAME.pid \
+	--exec $DAEMON > /dev/null 2>&1 -- $ARGS
+  for file in `ls -1 $CONFIGFILEDIR/*.god`; do $DAEMON load $file; done
+}
+
+d_stop() {
+start-stop-daemon --retry 5 --oknodo --stop --quiet --pidfile /var/run/$NAME.pid \
+	--exec $DAEMON  > /dev/null 2>&1
+}
+
+d_reload() {
+  kill -HUP `cat $PIDFILE` || echo -en "\n can't reload"
+}
+
+case "$1" in
+  start)
+    echo -n "Starting $DESC: $NAME"
+    d_start
+        echo "."
+  ;;
+  stop)
+    echo -n "Stopping $DESC: $NAME"
+    d_stop
+        echo "."
+  ;;
+  reload)
+    echo -n "Reloading $DESC configuration..."
+    d_reload
+        echo "."
+  ;;
+  restart)
+    echo -n "Restarting $DESC: $NAME"
+    d_stop
+    sleep 5
+    d_start
+    echo "."
+  ;;
+  *)
+    echo "Usage: $SCRIPTNAME {start|stop|restart|reload}" >&2
+    exit 3
+  ;;
+esac
+
+exit 0
