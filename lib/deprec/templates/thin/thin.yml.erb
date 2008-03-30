@@ -1,0 +1,11 @@
+--- 
+user: <%= thin_user %>
+group: <%= thin_group %>
+chdir: <%= current_path %>
+log: <%= thin_log_dir %>/thin.log
+environment: <%= thin_environment %>
+port: <%= thin_port.to_s %>
+address: <%= thin_address %>
+pid: <%= thin_pid_dir %>/thin.pid
+servers: <%= thin_servers.to_s %>
+swiftiply: <%= thin_swiftiply %>
