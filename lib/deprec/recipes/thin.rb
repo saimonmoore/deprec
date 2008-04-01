@@ -33,15 +33,10 @@ Capistrano::Configuration.instance(:must_exist).load do
       
       SYSTEM_CONFIG_FILES[:thin] = [   
 
-      {:template => 'thin-init-script',
-        :path => '/etc/init.d/thin',
-        :mode => 0755,
-        :owner => 'root:root'},
-
-       {:template => 'thin_proctitle.ru',
-        :path => '/etc/thin/thin_proctitle.ru',
-        :mode => 0755,
-        :owner => 'root:root'}
+        {:template => 'thin-init-script',
+         :path => '/etc/init.d/thin',
+         :mode => 0755,
+         :owner => 'root:root'}
       
       ]
         
@@ -118,7 +113,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       
       desc "Start application server."
       task :start, :roles => :app do
-        send(run_method, "thin start -C #{thin_conf} --rackup #{thin_proctitle}")
+        send(run_method, "thin start -C #{thin_conf}")
       end
       
       desc "Stop application server."
