@@ -10,14 +10,13 @@ pre-up iptables-restore < /etc/iptables.up.rules
 auto eth0
 iface eth0 inet static
         address <%= eth0_ip %>
-        netmask 255.255.254.0
-        broadcast 192.168.1.255
-        gateway 192.168.0.1
-        dns-nameservers 203.8.183.1 4.2.2.1
-
+        netmask 255.255.255.0
+        gateway <%= eth0_ip[0,eth0_ip.rindex('.')] + '.1' %>
+        dns-nameservers 208.78.97.155 208.75.87.250
+<% if eth1_ip.length > 0 %>
 auto eth1
 iface eth1 inet static
-		address <%= eth1_ip %>
+		address <%= eth1_ip.length %>
         netmask 255.255.255.0
-        broadcast 192.168.1.255
-        dns-nameservers 203.8.183.1 4.2.2.1
+        dns-nameservers 208.78.97.155 208.75.87.250
+<% end %>
