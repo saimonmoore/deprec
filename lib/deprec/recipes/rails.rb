@@ -1,7 +1,7 @@
 # Copyright 2006-2008 by Mike Bailey. All rights reserved.
 Capistrano::Configuration.instance(:must_exist).load do 
 
-  set :database_yml_in_scm, true
+  set :database_yml_in_scm, false
   set :app_symlinks, nil
   set :rails_env, 'production'
   set :gems_for_project, nil # Array of gems to be installed for app
