@@ -4,6 +4,7 @@
 # The loopback network interface
 auto lo
 iface lo inet loopback
+pre-up iptables-restore < /etc/iptables.up.rules
 
 <% network_number_of_ports.to_i.times do |port| %>
 # The primary network interface
