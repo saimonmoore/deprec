@@ -1,7 +1,7 @@
 # Copyright 2006-2008 by Mike Bailey. All rights reserved.
 Capistrano::Configuration.instance(:must_exist).load do 
 
-  set :database_yml_in_scm, false
+  set :database_yml_in_scm, true
   set :app_symlinks, nil
   set :rails_env, 'production'
   set :gems_for_project, nil # Array of gems to be installed for app
@@ -33,7 +33,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   after 'deploy:symlink', :roles => :app do
     top.deprec.rails.symlink_shared_dirs
     top.deprec.rails.symlink_database_yml unless database_yml_in_scm
-    top.deprec.thin.set_perms_for_thin_dirs
+    top.deprec.mongrel.set_perms_for_mongrel_dirs
   end
 
   after :deploy, :roles => :app do
@@ -43,7 +43,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   # redefine the reaper
   namespace :deploy do
     task :restart do
-      top.deprec.thin.restart
+      top.deprec.mongrel.restart
       top.deprec.nginx.restart
     end
   end
@@ -56,7 +56,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       :mode => 0644,
       :owner => 'root:root'}
     ]
-
+    
   namespace :deprec do
     namespace :rails do
 
@@ -87,16 +87,15 @@ Capistrano::Configuration.instance(:must_exist).load do
       task :config_gen do
         PROJECT_CONFIG_FILES[:nginx].each do |file|
           deprec2.render_template(:nginx, file)
-        end      
+        end
 
-        top.deprec.thin.config_gen_project
+        top.deprec.mongrel.config_gen_project
       end
 
       task :config, :roles => [:app, :web] do
         deprec2.push_configs(:nginx, PROJECT_CONFIG_FILES[:nginx])
-        top.deprec.thin.config_project
+        top.deprec.mongrel.config_project
         symlink_nginx_vhost
-#        symlink_god_config
       end
 
       task :symlink_nginx_vhost, :roles => :web do
@@ -111,8 +110,8 @@ Capistrano::Configuration.instance(:must_exist).load do
       task :setup_user_perms do
         deprec2.groupadd(group)
         deprec2.add_user_to_group(user, group)
-        deprec2.groupadd(thin_group)
-        deprec2.add_user_to_group(user, thin_group)
+        deprec2.groupadd(mongrel_group)
+        deprec2.add_user_to_group(user, mongrel_group)
         # we've just added ourself to a group - need to teardown connection
         # so that next command uses new session where we belong in group 
         deprec2.teardown_connections
@@ -233,11 +232,6 @@ Capistrano::Configuration.instance(:must_exist).load do
         # Ruby
         top.deprec.ruby.install      
         top.deprec.rubygems.install      
-
-        # Thin as our event-driven load balancer
-        top.deprec.swiftiply.install
-        top.deprec.swiftiply.config_gen
-        top.deprec.swiftiply.config
         
         # Mongrel as our app server
         top.deprec.mongrel.install
@@ -261,11 +255,6 @@ Capistrano::Configuration.instance(:must_exist).load do
         # Install mysql
         top.deprec.mysql.install
         top.deprec.mysql.start
-
-        # Memcached
-        top.deprec.memcached.install
-        top.deprec.memcached.config_gen
-        top.deprec.memcached.config
         
         # Install rails
         top.deprec.rails.install
@@ -275,11 +264,10 @@ Capistrano::Configuration.instance(:must_exist).load do
       task :setup_servers do
 
         top.deprec.nginx.activate       
-        top.deprec.thin.create_thin_user_and_group 
-        top.deprec.thin.config_gen_project
-        top.deprec.thin.config_project
-        top.deprec.thin.activate
-#        top.deprec.god.activate
+        top.deprec.mongrel.create_mongrel_user_and_group 
+        top.deprec.mongrel.config_gen_project
+        top.deprec.mongrel.config_project
+        top.deprec.mongrel.activate
         top.deprec.rails.config_gen
         top.deprec.rails.config
       end
@@ -312,7 +300,7 @@ Capistrano::Configuration.instance(:must_exist).load do
 
     namespace :deploy do
       task :restart, :roles => :app, :except => { :no_release => true } do
-        top.deprec.thin.restart
+        top.deprec.mongrel.restart
       end
     end
   end
