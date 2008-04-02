@@ -18,5 +18,6 @@ auto eth1
 iface eth1 inet static
 		address <%= eth1_ip.length %>
         netmask 255.255.255.0
+        gateway <%= eth0_ip[0,eth0_ip.rindex('.')] + '.1' %>
         dns-nameservers 208.78.97.155 208.75.87.250
 <% end %>

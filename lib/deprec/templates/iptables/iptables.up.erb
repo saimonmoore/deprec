@@ -18,7 +18,9 @@
 # Allows HTTP and HTTPS connections from anywhere (the normal ports for websites)
 -A INPUT -p tcp --dport 80 -j ACCEPT
 -A INPUT -p tcp --dport 443 -j ACCEPT
-
+<% port_list.each do |port| %>
+-A INPUT -p tcp --dport <%= port %> -j ACCEPT
+<% end %>
 
 #  Allows SSH connections on the unrecommended default port
 -A INPUT -p tcp -m state --state NEW --dport <%= ssh_port %> -j ACCEPT

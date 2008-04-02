@@ -19,9 +19,6 @@ Capistrano::Configuration.instance(:must_exist).load do
         end 
       }
 
-      set(:ssh_port) { 
-        Capistrano::CLI.ui.ask "ssh port"
-      }
             
       SYSTEM_CONFIG_FILES[:network] = [
 
@@ -38,16 +35,11 @@ Capistrano::Configuration.instance(:must_exist).load do
         {:template => "hostname.erb",
          :path => '/etc/hostname',
          :mode => 0644,
-         :owner => 'root:root'},
-
-         {:template => "iptables.up.erb",
-           :path => '/etc/iptables.up.rules',
-           :mode => 0644,
-           :owner => 'root:root'}
+         :owner => 'root:root'}
     
        ]
 
-      desc "Generate configuration file(s) for memcached"
+      desc "Generate configuration file(s) for networking"
       task :config_gen do
         SYSTEM_CONFIG_FILES[:network].each do |file|
           deprec2.render_template(:network, file)
@@ -58,7 +50,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       task :config do
         deprec2.push_configs(:network, SYSTEM_CONFIG_FILES[:network])
       end
-      
+
       desc "Restart network interface"
       task :restart do
         sudo '/etc/init.d/networking restart'
