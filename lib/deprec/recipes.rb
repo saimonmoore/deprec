@@ -17,6 +17,7 @@ end
 ## Enabled Modules
 require "#{File.dirname(__FILE__)}/recipes/deprec"
 require "#{File.dirname(__FILE__)}/recipes/deprecated"
+require "#{File.dirname(__FILE__)}/recipes/iptables"
 require "#{File.dirname(__FILE__)}/recipes/memcached"
 require "#{File.dirname(__FILE__)}/recipes/mongrel"
 require "#{File.dirname(__FILE__)}/recipes/mysql"

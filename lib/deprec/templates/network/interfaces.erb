@@ -15,5 +15,4 @@ iface <%= "eth#{port}" %> inet static
         broadcast <%= network_interfaces[port][:broadcast] %>
         <%= "gateway #{network_gateway}" if port == 0 %>
         <%= "dns-nameservers #{network_dns_nameservers}" if port == 0 %>
-
 <% end %>
