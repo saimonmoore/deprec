@@ -1,6 +1,6 @@
 upstream <%= application %> {
 <% mongrel_servers.times do |counter| -%>
-  <%= "server 127.0.0.1:#{8000+counter};"  %>
+  <%= "server 127.0.0.1:#{mongrel_port+counter};"  %>
 <% end -%>
 }
 
