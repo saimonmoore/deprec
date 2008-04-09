@@ -18,7 +18,10 @@ Capistrano::Configuration.instance(:must_exist).load do
         :configure => %w(
         ./configure
         --sbin-path=/usr/local/sbin
-        --with-http_ssl_module
+        --with-http_stub_status_module
+        --with-mail
+        --with-mail_ssl_module
+        --with-http_dav_module
         ;
         ).reject{|arg| arg.match '#'}.join(' '),
         :make => 'make;',
