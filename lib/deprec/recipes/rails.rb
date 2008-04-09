@@ -8,6 +8,23 @@ Capistrano::Configuration.instance(:must_exist).load do
   set :shared_dirs, nil # Array of directories that should be created under shared/
                         # and linked to in the project
 
+  PROJECT_CONFIG_FILES[:rails] = [
+
+    {:template => 'database.yml.erb',
+     :path => 'database.yml',
+     :mode => 0644,
+     :owner => 'root:root'}
+
+  ]
+
+  PROJECT_CONFIG_FILES[:nginx] = [
+
+    {:template => 'rails_nginx_vhost.conf.erb',
+      :path => "rails_nginx_vhost.conf", 
+      :mode => 0644,
+      :owner => 'root:root'}
+    ]
+    
   # Hook into the default capistrano deploy tasks
   before 'deploy:setup', :except => { :no_release => true } do
     top.deprec.rails.setup_user_perms
@@ -33,7 +50,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   after 'deploy:symlink', :roles => :app do
     top.deprec.rails.symlink_shared_dirs
     top.deprec.rails.symlink_database_yml unless database_yml_in_scm
-    top.deprec.mongrel.set_perms_for_mongrel_dirs
+    top.deprec.thin.set_perms_for_thin_dirs
   end
 
   after :deploy, :roles => :app do
@@ -43,19 +60,11 @@ Capistrano::Configuration.instance(:must_exist).load do
   # redefine the reaper
   namespace :deploy do
     task :restart do
-      top.deprec.mongrel.restart
+      top.deprec.thin.restart
       top.deprec.nginx.restart
     end
   end
 
-
-  PROJECT_CONFIG_FILES[:nginx] = [
-
-    {:template => 'rails_nginx_vhost.conf.erb',
-      :path => "rails_nginx_vhost.conf", 
-      :mode => 0644,
-      :owner => 'root:root'}
-    ]
     
   namespace :deprec do
     namespace :rails do
@@ -89,12 +98,12 @@ Capistrano::Configuration.instance(:must_exist).load do
           deprec2.render_template(:nginx, file)
         end
 
-        top.deprec.mongrel.config_gen_project
+        top.deprec.thin.config_gen_project
       end
 
       task :config, :roles => [:app, :web] do
         deprec2.push_configs(:nginx, PROJECT_CONFIG_FILES[:nginx])
-        top.deprec.mongrel.config_project
+        top.deprec.thin.config_project
         symlink_nginx_vhost
       end
 
@@ -110,8 +119,8 @@ Capistrano::Configuration.instance(:must_exist).load do
       task :setup_user_perms do
         deprec2.groupadd(group)
         deprec2.add_user_to_group(user, group)
-        deprec2.groupadd(mongrel_group)
-        deprec2.add_user_to_group(user, mongrel_group)
+        deprec2.groupadd(thin_group)
+        deprec2.add_user_to_group(user, thin_group)
         # we've just added ourself to a group - need to teardown connection
         # so that next command uses new session where we belong in group 
         deprec2.teardown_connections
@@ -161,45 +170,18 @@ Capistrano::Configuration.instance(:must_exist).load do
 
       # database.yml stuff
       #
-      # XXX DRY this up 
-      # I don't know how to let :gen_db_yml check if values have been set.
-      #
-      # if (self.respond_to?("db_host_#{rails_env}".to_sym)) # doesn't seem to work
-
-      set :db_host_default, lambda { Capistrano::CLI.prompt 'Enter database host', 'localhost'}
-      set :db_host_staging, lambda { db_host_default }
-      set :db_host_production, lambda { db_host_default }
-
-      set :db_name_default, lambda { Capistrano::CLI.prompt 'Enter database name', "#{application}_#{rails_env}" }
-      set :db_name_staging, lambda { db_name_default }
-      set :db_name_production, lambda { db_name_default }
-
-      set :db_user_default, lambda { Capistrano::CLI.prompt 'Enter database user', 'root' }
-      set :db_user_staging, lambda { db_user_default }
-      set :db_user_production, lambda { db_user_default }
-
-      set :db_pass_default, lambda { Capistrano::CLI.prompt 'Enter database pass', '' }
-      set :db_pass_staging, lambda { db_pass_default }
-      set :db_pass_production, lambda { db_pass_default }
-
-      set :db_adaptor_default, lambda { Capistrano::CLI.prompt 'Enter database adaptor', 'mysql' }
-      set :db_adaptor_staging, lambda { db_adaptor_default }
-      set :db_adaptor_production, lambda { db_adaptor_default }
-
-      set :db_socket_default, lambda { Capistrano::CLI.prompt('Enter database socket', '')}
-      set :db_socket_staging, lambda { db_socket_default }
-      set :db_socket_production, lambda { db_socket_default }
-
       task :generate_database_yml, :roles => :app do    
-        database_configuration = render :template => <<-EOF
-        #{rails_env}:
-        adapter: #{self.send("db_adaptor_#{rails_env}")}
-        database: #{self.send("db_name_#{rails_env}")}
-        username: #{self.send("db_user_#{rails_env}")}
-        password: #{self.send("db_pass_#{rails_env}")}
-        host: #{self.send("db_host_#{rails_env}")}
-        socket: #{self.send("db_socket_#{rails_env}")}
-        EOF
+        host = Capistrano::CLI.ui.ask 'Enter database host' do |q| q.default = 'localhost' end
+        db_name = Capistrano::CLI.ui.ask 'Enter database name'  do |q| q.default = "#{application}_#{rails_env}" end
+        user = Capistrano::CLI.ui.ask 'Enter database user' do |q| q.default = 'root' end
+        pass = Capistrano::CLI.ui.ask 'Enter database pass' do |q| q.default = '' end
+        adapter = Capistrano::CLI.ui.ask 'Enter database adapter' do |q| q.default = 'mysql' end
+        socket = Capistrano::CLI.ui.ask 'Enter database socket' do |q| q.default = '' end
+
+        SYSTEM_CONFIG_FILES[:rails].each do |file|
+          deprec2.render_template(:rails, file)
+        end
+        deprec2.push_configs(:thin, SYSTEM_CONFIG_FILES[:thin])
         run "mkdir -p #{deploy_to}/#{shared_dir}/config" 
         put database_configuration, "#{deploy_to}/#{shared_dir}/config/database.yml" 
       end
@@ -232,6 +214,9 @@ Capistrano::Configuration.instance(:must_exist).load do
         # Ruby
         top.deprec.ruby.install      
         top.deprec.rubygems.install      
+
+        # Backend agnostic load balancing with Swiftiply
+        top.deprec.swiftiply.install
         
         # Mongrel as our app server
         top.deprec.mongrel.install
@@ -264,10 +249,11 @@ Capistrano::Configuration.instance(:must_exist).load do
       task :setup_servers do
 
         top.deprec.nginx.activate       
-        top.deprec.mongrel.create_mongrel_user_and_group 
-        top.deprec.mongrel.config_gen_project
-        top.deprec.mongrel.config_project
-        top.deprec.mongrel.activate
+        top.deprec.swiftiply.config_gen
+        top.deprec.swiftiply.config
+        top.deprec.thin.config_gen_system
+        top.deprec.thin.config_system
+        top.deprec.thin.activate_system
         top.deprec.rails.config_gen
         top.deprec.rails.config
       end
@@ -300,7 +286,7 @@ Capistrano::Configuration.instance(:must_exist).load do
 
     namespace :deploy do
       task :restart, :roles => :app, :except => { :no_release => true } do
-        top.deprec.mongrel.restart
+        top.deprec.thin.restart
       end
     end
   end
