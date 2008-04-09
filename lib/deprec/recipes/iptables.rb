@@ -42,7 +42,7 @@ Capistrano::Configuration.instance(:must_exist).load do
 
       desc "Load iptables rules and restart networking"
       task :activate_system do
-        sudo "grep -q 'iptables-restore' interfaces || echo 'pre-up iptables-restore #{iptables_rules}' >> #{interfaces}"
+        deprec2.append_to_file_if_missing(interfaces, "pre-up iptables-restore #{iptables_rules}")
         sudo "/etc/init.d/networking restart"
       end
       
