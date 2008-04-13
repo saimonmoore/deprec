@@ -9,12 +9,38 @@ Capistrano::Configuration.instance(:must_exist).load do
       set(:swiftiply_pidfile) { "/var/run/swiftiply/swiftiply.pid" }  
       set :swiftiply_port, 9000
 
+      # No Rubygems loading (citing reasons of speed)
+      SRC_PACKAGES[:swiftiply] = {
+        :filename => 'swiftiply-0.6.1.1.tar.bz2',   
+        :md5sum => "c2ff6de68701f778fd7d3d40b907e562  swiftiply-0.6.1.1.tar.bz2", 
+        :dir => 'swiftiply-0.6.1.1',  
+        :url => "http://swiftiply.swiftcore.org/files/swiftiply-0.6.1.1.tar.bz2",
+        :unpack => "tar jxf swiftiply-0.6.1.1.tar.bz2;",
+        :configure => 'ruby setup.rb config;',
+        :make => 'ruby setup.rb setup;',
+        :install => 'ruby setup.rb install;'
+      }
+
+      # No Rubygems loading (citing reasons of speed)
+      SRC_PACKAGES[:event_machine] = {
+        :filename => 'eventmachine-0.10.0.tar.gz',   
+        :md5sum => "5f9dd6419c7ae0e3af569d315d8ee4f2  eventmachine-0.10.0.tar.gz", 
+        :dir => 'eventmachine-0.10.0',  
+        :url => "http://files.rubyforge.vm.bytemark.co.uk/eventmachine/eventmachine-0.10.0.tar.gz",
+        :unpack => "tar zxf eventmachine-0.10.0.tar.gz;",
+        :configure => 'ruby setup.rb config;',
+        :make => 'ruby setup.rb setup;',
+        :install => 'ruby setup.rb install;'
+      }
+
+
       desc "Install swiftiply"
       task :install, :roles => :web do
         gem2.install 'swiftiply'
       end
       
       task :install_deps do
+        
       end
       
       SYSTEM_CONFIG_FILES[:swiftiply] = [
