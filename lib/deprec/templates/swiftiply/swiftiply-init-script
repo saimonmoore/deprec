@@ -1,71 +1,61 @@
 #!/bin/bash
-#
-# Copyright (c) 2007 Bradley Taylor, bradley@railsmachine.com
-#
-# mongrel_cluster       Startup script for Mongrel clusters.
-#
-# chkconfig: - 85 15
-# description: mongrel_cluster manages multiple Mongrel processes for use \
-#              behind a load balancer.
-#              
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:             swiftiply
+# Should-Start:         $local_fs
+# Should-Stop:          $local_fs
+# Default-Start:        2 3 4 5
+# Default-Stop:         0 1 6
+# Short-Description:    swiftiply - Back-end agnostic load balancer
+# Description:          swiftiply - Back-end agnostic load balancer
+### END INIT INFO
 
-PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin
-CONF_DIR=<%= swiftiply_conf_dir %>
-CONF=<%= swiftiply_conf %>
-PID_DIR=<%= swiftiply_pid_dir %>
-PID_FILE=<%= swiftiply_pidfile %>
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/usr/local/bin/swiftiply
+NAME=swiftiply
+DESC=swiftiply
+PIDFILE=<%= swiftiply_pid_file %>
+
+ARGS="-c <%= swiftiply_conf %>"
 
 EVENT=1
 
-RETVAL=0
-
-# Gracefully exit if the controller is missing.
-which swiftiply >/dev/null || exit 0
-
-# Go no further if config directory is missing.
-[ -d "$CONF_DIR" ] || exit 0
-
-# Thanks Justin Pease!
-function generatepid(){
-  current_pid=`pgrep -f 'swiftiply -c $CONF'`
-	touch $PID_FILE
-  pidfile_pid=`cat $PID_FILE`
-
-  if [[ $current_pid = '' ]]; then
-    rm $PID_FILE
-  elif [[ $pidfile_pid != $current_pid ]]; then
-    echo $current_pid > $PID_FILE
-  fi
-}
-
 case "$1" in
-	start)
-	  # Create pid directory
-	  mkdir -p $PID_DIR
-	  # chown $USER:$USER $PID_DIR
+  start)
+	  echo -n "Starting $DESC: "
+    : > <%= swiftiply_conf %>
+    find <%= swiftiply_conf_dir %> -wholename <%= swiftiply_conf %> -o -type f , -type l -exec cat '{}' \; >> <%= swiftiply_conf %>
 
-	  swiftiply -c $CONF || exit 0
-		generatepid
-	;;
-	stop)
-	killall -9 swiftiply
-	  swiftiply stop -c $CONF || exit 0
-		generatepid
-	;;
-	restart)
-		$0 stop
-		$0 start
-	;;
-	reload)
-		killall -HUP swiftiply || exit 0
-	;;
-  pid)
-    generatepid
-  ;;
-	*)
-	  echo "Usage: swiftiply {start|stop|restart|reload|pid}"
+	  start-stop-daemon --start --quiet --pidfile $PIDFILE -m --exec $DAEMON -- $ARGS
+	  echo "$NAME."
+	  ;;
+  stop)
+	  echo -n "Stopping $DESC: "
+	  start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE --exec $DAEMON 
+	  echo "$NAME."
+	  rm -f $PIDFILE
+	  ;;
+  stop)
+	  echo -n "Reloading $DESC"
+	  kill -HUP `cat $PIDFILE`
+	  echo "$NAME."
+	  rm -f $PIDFILE
+	  ;;
+
+  restart|force-reload)
+	  echo -n "Restarting $DESC: "
+	  start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
+	  rm -f $PIDFILE
+
+	  start-stop-daemon --start --quiet --exec $ARGS
+	  echo "$NAME."
+	  ;;
+  *)
+	  N=/etc/init.d/$NAME
+	  echo "Usage: $N {start|stop|reload|restart|force-reload}" >&2
 	  exit 1
-	;;
-esac      
+	  ;;
+esac
 
 exit 0
