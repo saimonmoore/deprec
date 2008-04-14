@@ -7,8 +7,8 @@
 # information.
 -d
 
-# Log memcached's output to /var/log/memcached
-logfile <%= @memcached_log %>
+#PID File
+-P <%= memcached_pid_file %>
 
 # Be verbose
 # -v
@@ -19,19 +19,19 @@ logfile <%= @memcached_log %>
 # Start with a cap of 64 megs of memory. It's reasonable, and the daemon default
 # Note that the daemon will grow to this size, but does not start out holding this much
 # memory
--m <%= @mysql_host %>
+-m <%= memcached_cache_size %>
 
 # Default connection port is 11211
--p <%= @memcached_port %> 
+-p <%= memcached_port %> 
 
 # Run the daemon as root. The start-memcached will default to running as root if no
 # -u command is present in this config file
--u <%= @memcached_user %>
+-u <%= memcached_user %>
 
 # Specify which IP address to listen on. The default is to listen on all IP addresses
 # This parameter is one of the only security measures that memcached has, so make sure
 # it's listening on a firewalled interface.
--l <%= @memcached_address %>
+-l <%= memcached_address %>
 
 # Limit the number of simultaneous incoming connections. The daemon default is 1024
 # -c 1024

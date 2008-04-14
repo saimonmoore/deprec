@@ -1,8 +1,6 @@
 #! /bin/sh
 ### BEGIN INIT INFO
 # Provides:             memcached
-# Required-Start:       $syslog
-# Required-Stop:        $syslog
 # Should-Start:         $local_fs
 # Should-Stop:          $local_fs
 # Default-Start:        2 3 4 5
@@ -14,20 +12,25 @@
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 DAEMON=/usr/local/bin/memcached
-DAEMONBOOTSTRAP=/usr/local/share/memcached/scripts/start-memcached
+DAEMONBOOTSTRAP=/etc/memcached/memcached.conf
 NAME=memcached
 DESC=memcached
-PIDFILE=/var/run/$NAME.pid
+PIDFILE=<%= memcached_pid_file %>
 
 test -x $DAEMON || exit 0
 test -x $DAEMONBOOTSTRAP || exit 0
+
+#PIDFILE=`sed -n 's/-P \(\/\)/\1/p' $DAEMONBOOTSTRAP`
+# Remove comments, then tidy whitespace, then concatenate the lines into one line
+ARGS=`sed 's/\#.*//;/^[ \n]*$/d;' $DAEMONBOOTSTRAP | tr '\012' ' '`
 
 set -e
 
 case "$1" in
   start)
 	  echo -n "Starting $DESC: "
-	  start-stop-daemon --start --quiet --exec $DAEMONBOOTSTRAP
+	  touch <%= memcached_pid_file %> && chown <%= memcached_user %>:<%= memcached_group %> <%= memcached_pid_file %>
+	  start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- $ARGS
 	  echo "$NAME."
 	  ;;
   stop)
@@ -36,24 +39,25 @@ case "$1" in
 	  echo "$NAME."
 	  rm -f $PIDFILE
 	  ;;
+  stop)
+	  echo -n "Reloading $DESC"
+	  kill -HUP `cat $PIDFILE`
+	  echo "$NAME."
+	  rm -f $PIDFILE
+	  ;;
 
   restart|force-reload)
-	  #
-	  #       If the "reload" option is implemented, move the "force-reload"
-	  #       option to the "reload" entry above. If not, "force-reload" is
-	  #       just the same as "restart".
-	  #
 	  echo -n "Restarting $DESC: "
 	  start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
 	  rm -f $PIDFILE
-	  sleep 1
-	  start-stop-daemon --start --quiet --exec $DAEMONBOOTSTRAP
+	  touch <%= memcached_pid_file %> && chown <%= memcached_user %>:<%= memcached_group %> <%= memcached_pid_file %>
+
+	  start-stop-daemon --start --quiet --exec $ARGS
 	  echo "$NAME."
 	  ;;
   *)
 	  N=/etc/init.d/$NAME
-	  # echo "Usage: $N {start|stop|restart|reload|force-reload}" >&2
-	  echo "Usage: $N {start|stop|restart|force-reload}" >&2
+	  echo "Usage: $N {start|stop|reload|restart|force-reload}" >&2
 	  exit 1
 	  ;;
 esac

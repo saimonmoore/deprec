@@ -4,14 +4,18 @@ Capistrano::Configuration.instance(:must_exist).load do
     namespace :memcached do
       set :memcached_port, 11211
       set :memcached_address, "127.0.0.1"
-      set(:memcached_log) { "/var/log/memcached" }
+      set :memcached_cache_size, 64
+      set :memcached_user, "memcached"
+      set :memcached_group, "memcached"
+      set :memcached_pid_file, "/var/run/memcached.pid"
+
       
       SRC_PACKAGES[:memcached] = {
-        :filename => "memcached-1.2.2.tar.gz",
-        :md5sum => "a08851f7fa7b15e92ee6320b7a79c321  memcached-1.2.2.tar.gz", 
-        :dir => "memcached-1.2.2",
-        :url => "http://www.danga.com/memcached/dist/memcached-1.2.2.tar.gz",
-        :unpack => "tar zxf memcached-1.2.2.tar.gz;",
+        :filename => "memcached-1.2.5.tar.gz",
+        :md5sum => "8ac0d1749ded88044f0f850fad979e4d  memcached-1.2.5.tar.gz", 
+        :dir => "memcached-1.2.5",
+        :url => "http://danga.com/memcached/dist/memcached-1.2.5.tar.gz",
+        :unpack => "tar zxf memcached-1.2.5.tar.gz;",
         :configure => %w(
             ./configure
             --prefix=/usr/local 
@@ -19,7 +23,6 @@ Capistrano::Configuration.instance(:must_exist).load do
           ).reject{|arg| arg.match '#'}.join(' '),
         :make => 'make;',
         :install => 'make install;',
-        :post_install => 'install -b scripts/memcached-init /etc/init.d/memcached;'
       }
 
       desc "Install memcached"
@@ -27,6 +30,12 @@ Capistrano::Configuration.instance(:must_exist).load do
         install_deps
         deprec2.download_src(SRC_PACKAGES[:memcached], src_dir)
         deprec2.install_from_src(SRC_PACKAGES[:memcached], src_dir)
+
+        deprec2.groupadd(memcached_group) 
+        deprec2.useradd(memcached_user, :group => memcached_group, :homedir => false)
+        # Set the primary group for the thin user (in case user already existed
+        # when previous command was run)
+        sudo "usermod --gid #{memcached_group} #{memcached_user}"
       end
       
       task :install_deps do
@@ -39,11 +48,6 @@ Capistrano::Configuration.instance(:must_exist).load do
          :path => '/etc/init.d/memcached',
          :mode => 0755,
          :owner => 'root:root'},
-
-         {:template => "start-memcached",
-          :path => '/usr/local/share/memcached/scripts/start-memcached',
-          :mode => 0755,
-          :owner => 'root:root'},
 
          {:template => "memcached.conf.erb",
           :path => '/etc/memcached/memcached.conf',
@@ -80,9 +84,11 @@ Capistrano::Configuration.instance(:must_exist).load do
       end
       
       task :activate, :roles => :db do
+        send(run_method, "update-rc.d memcached defaults")
       end  
       
       task :deactivate, :roles => :db do
+        send(run_method, "update-rc.d -f memcached remove")
       end
       
       task :backup, :roles => :db do
