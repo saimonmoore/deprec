@@ -3,10 +3,9 @@ Capistrano::Configuration.instance(:must_exist).load do
   namespace :deprec do
     namespace :swiftiply do
 
-      set(:swiftiply_conf_dir) { "/etc/swiftiply/" }  
-      set(:swiftiply_conf) { "/etc/swiftiply/#{application}.yml" }  
-      set(:swiftiply_pid_dir) { "/var/run/swiftiply" }  
-      set(:swiftiply_pidfile) { "/var/run/swiftiply/swiftiply.pid" }  
+      set(:swiftiply_conf_dir) { "/etc/swiftiply/" }
+      set(:swiftiply_conf) { "/etc/swiftiply/swiftiply.conf" }
+      set(:swiftiply_pid_file) { "/var/run/swiftiply/swiftiply.pid" }
       set :swiftiply_port, 9000
 
       # No Rubygems loading (citing reasons of speed)
@@ -16,9 +15,7 @@ Capistrano::Configuration.instance(:must_exist).load do
         :dir => 'swiftiply-0.6.1.1',  
         :url => "http://swiftiply.swiftcore.org/files/swiftiply-0.6.1.1.tar.bz2",
         :unpack => "tar jxf swiftiply-0.6.1.1.tar.bz2;",
-        :configure => 'ruby setup.rb config;',
-        :make => 'ruby setup.rb setup;',
-        :install => 'ruby setup.rb install;'
+        :install => 'ruby setup.rb;'
       }
 
       # No Rubygems loading (citing reasons of speed)
@@ -28,19 +25,20 @@ Capistrano::Configuration.instance(:must_exist).load do
         :dir => 'eventmachine-0.10.0',  
         :url => "http://files.rubyforge.vm.bytemark.co.uk/eventmachine/eventmachine-0.10.0.tar.gz",
         :unpack => "tar zxf eventmachine-0.10.0.tar.gz;",
-        :configure => 'ruby setup.rb config;',
-        :make => 'ruby setup.rb setup;',
-        :install => 'ruby setup.rb install;'
+        :install => 'ruby setup.rb;'
       }
 
 
       desc "Install swiftiply"
       task :install, :roles => :web do
-        gem2.install 'swiftiply'
+        install_deps
+        deprec2.download_src(SRC_PACKAGES[:swiftiply], src_dir)
+        deprec2.install_from_src(SRC_PACKAGES[:swiftiply], src_dir)
       end
       
       task :install_deps do
-        
+        deprec2.download_src(SRC_PACKAGES[:event_machine], src_dir)
+        deprec2.install_from_src(SRC_PACKAGES[:event_machine], src_dir)
       end
       
       SYSTEM_CONFIG_FILES[:swiftiply] = [
@@ -92,9 +90,11 @@ Capistrano::Configuration.instance(:must_exist).load do
       end
       
       task :activate, :roles => :web do
+        send(run_method, "update-rc.d swiftiply defaults")
       end  
       
       task :deactivate, :roles => :web do
+        send(run_method, "update-rc.d swiftiply defaults")
       end
       
       task :backup, :roles => :web do
