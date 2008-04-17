@@ -27,7 +27,7 @@ Capistrano::Configuration.instance(:must_exist).load do
          :mode => 0755,
          :owner => 'root:root'},
          
-         # This one is a bugfix for gutsy 
+        # This one is a bugfix for gutsy 
         {:template => "15-disable-hwclock",
          :path => '/usr/lib/xen-tools/gutsy.d/15-disable-hwclock',
          :mode => 0755,
@@ -68,7 +68,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       end
       
       desc "Push Xen config files to server"
-      task :config, :roles => :dom0 do
+      task :config do
         deprec2.push_configs(:xen, SYSTEM_CONFIG_FILES[:xen])
       end
       
@@ -90,3 +90,24 @@ end
 # fix it with this:
 #
 # sudo rm /etc/udev/rules.d/70-persistent-net.rules
+
+
+
+# ubuntu bugs
+# 
+# check if they're fixed in hardy heron
+
+#    1: domains are not shut down on system shutdown
+#    cause: order that init scripts get called
+#    fix: call /etc/init.d/xendomains from /etc/init.d/xend script
+
+      # stop)
+      # /etc/init.d/xendomains stop # make sure domains are shut down
+      # xend stop
+      # ;;
+      
+# virtsh
+#
+# enable by putting this into /etc/xen/xend-conf.sxp
+# (xend-unix-server yes)
+
