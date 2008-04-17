@@ -29,6 +29,7 @@ module Apt
   # Select those packages referenced by <tt>:base</tt> and the +version+
   # of the distribution you want to use.
   def install(packages, version, options={})
+    update
     special_options="--allow-unauthenticated" if version != :stable
     send(run_method, %{
       sh -c "#{APT_GET} -qyu --force-yes #{special_options.to_s} install #{package_list(packages, version)}"
