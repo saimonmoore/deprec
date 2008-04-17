@@ -39,7 +39,6 @@ Capistrano::Configuration.instance(:must_exist).load do
           :install => 'make install;',
           :post_install => ""
         }
-        enable_universe
         install_deps
         run "export CFLAGS=-O2;"
         deprec2.download_src(src_package, src_dir)
