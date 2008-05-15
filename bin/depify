@@ -74,7 +74,7 @@ files = {
   
     set :application, "set your application name here"
     set :domain, "set domain name project will be served on here"
-    set :repository,  "svn+ssh://\#{domain}/var/www/apps/\#{application}/repos"
+    set :repository,  "svn+ssh://\#{domain}/var/www/apps/\#{application}/repos/trunk"
     # set :gems_for_project, %w(dr_nic_magic_models swiftiply) # list of gems to be installed
     
     # Update these if you're not running everything on one host.
