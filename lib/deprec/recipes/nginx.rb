@@ -10,11 +10,11 @@ Capistrano::Configuration.instance(:must_exist).load do
       set :nginx_client_max_body_size, '50M'
 
       SRC_PACKAGES[:nginx] = {
-        :filename => 'nginx-0.5.35.tar.gz',   
-        :md5sum => "1100d8a2f811777f38eff44fe6548d7e  nginx-0.5.35.tar.gz", 
-        :dir => 'nginx-0.5.35',  
-        :url => "http://sysoev.ru/nginx/nginx-0.5.35.tar.gz",
-        :unpack => "tar zxf nginx-0.5.35.tar.gz;",
+        :filename => 'nginx-0.6.31.tar.gz',   
+        :md5sum => "824bcc25bbd5b636f182237b69227bd2 nginx-0.5.34.tar.gz", 
+        :dir => 'nginx-0.6.31',  
+        :url => "http://sysoev.ru/nginx/nginx-0.6.31.tar.gz",
+        :unpack => "tar zxf nginx-0.6.31.tar.gz;",
         :configure => %w(
         ./configure
         --sbin-path=/usr/local/sbin
