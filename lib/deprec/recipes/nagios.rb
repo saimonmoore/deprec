@@ -228,12 +228,15 @@ Capistrano::Configuration.instance(:must_exist).load do
       :dir => 'nrpe-2.11',  
       :url => "http://easynews.dl.sourceforge.net/sourceforge/nagios/nrpe-2.11.tar.gz",
       :unpack => "tar zxfv nrpe-2.11.tar.gz;",
-      :configure => "./configure --with-nagios-user=#{nagios_user} --with-nagios-group=#{nagios_group};",
+      :configure => "./configure --with-nagios-user=#{nagios_user} --with-nagios-group=#{nagios_group} #{ '--enable-command-args' if nrpe_enable_command_args};",
       :make => 'make all;',
       :install => 'make install-plugin; make install-daemon; make install-daemon-config;'
     }
     
     namespace :nrpe do
+      
+      set :nrpe_enable_command_args, false # set to true to compile nrpe to accept arguments
+	                                       # note that you'll need to set it before these recipes are loaded (e.g. in .caprc)
     
       task :install do
         install_deps
@@ -277,7 +280,8 @@ Capistrano::Configuration.instance(:must_exist).load do
       task :config do
         deprec2.push_configs(:nagios, SYSTEM_CONFIG_FILES[:nrpe])
         # XXX should really only do this on targets
-        sudo "/etc/init.d/xinetd restart"  
+        sudo "/etc/init.d/xinetd stop"  
+        sudo "/etc/init.d/xinetd start"  
       end
       
       task :test_local do
