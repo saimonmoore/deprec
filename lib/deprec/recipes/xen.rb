@@ -78,6 +78,37 @@ Capistrano::Configuration.instance(:must_exist).load do
       # Start a virtual image (and open console to it)
       # xm create -c /etc/xen/x1.cfg
       
+      desc "Start Xen"
+      task :start do
+        send(run_method, "/etc/init.d/xend start")
+      end
+
+      desc "Stop Xen"
+      task :stop do
+        send(run_method, "/etc/init.d/xend stop")
+      end
+
+      desc "Restart Xen"
+      task :restart do
+        send(run_method, "/etc/init.d/xend restart")
+      end
+
+      desc "Reload Xen"
+      task :reload do
+        send(run_method, "/etc/init.d/xend reload")
+      end
+      
+      task :list do
+        sudo "xm list"
+      end
+      
+      task :info do
+        sudo "xm info"
+      end
+      
+      
+      
+      
     end
   end
 end
@@ -111,3 +142,45 @@ end
 # enable by putting this into /etc/xen/xend-conf.sxp
 # (xend-unix-server yes)
 
+
+
+#
+# Install xen on ubuntu hardy
+#
+# ref: http://www.howtoforge.com/ubuntu-8.04-server-install-xen-from-ubuntu-repositories
+#
+
+
+# Install Xen packages 
+# apt-get install ubuntu-xen-server
+  #
+  # Installs these:
+  # 
+  # binutils binutils-static bridge-utils debootstrap libasound2 libconfig-inifiles-perl libcurl3 libdirectfb-1.0-0 libsdl1.2debian
+  # libsdl1.2debian-alsa libtext-template-perl libxen3 libxml2 linux-image-2.6.24-16-xen linux-image-xen
+  # linux-restricted-modules-2.6.24-16-xen linux-restricted-modules-common linux-restricted-modules-xen
+  # linux-ubuntu-modules-2.6.24-16-xen linux-xen nvidia-kernel-common python-dev python-xen-3.2 python2.5-dev ubuntu-xen-server
+  # xen-docs-3.2 xen-hypervisor-3.2 xen-tools xen-utils-3.2
+  
+  # before/after 'uname -a'
+  #
+  # Linux bb 2.6.24-16-server #1 SMP Thu Apr 10 13:15:38 UTC 2008 x86_64 GNU/Linux
+  # Linux bb 2.6.24-16-xen #1 SMP Thu Apr 10 14:35:03 UTC 2008 x86_64 GNU/Linux
+# 
+# Stop apparmor # XXX investigate why
+# /etc/init.d/apparmor stop
+# update-rc.d -f apparmor remove
+
+# mkdir /home/xen
+
+# edit /etc/xen-tools/xen-tools.cfg
+
+# create image with xen-tools
+# xen-create-image --hostname=x1 --size=2Gb --swap=256Mb --ide --ip=192.168.1.51 --memory=256Mb --install-method=debootstrap --dist=hardy 
+
+# update /etc/xen/<domain>.cfg
+#
+# disk        = [
+              #     'tap:aio:/home/xen/domains/xen1.example.com/swap.img,hda1,w',
+              #     'tap:aio:/home/xen/domains/xen1.example.com/disk.img,hda2,w',
+              # ] 
