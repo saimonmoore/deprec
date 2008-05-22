@@ -32,7 +32,7 @@ Capistrano::Configuration.instance(:must_exist).load do
         end 
       } 
       set(:network_gateway) { 
-        Capistrano::CLI.ui.ask "gateway" do |q|
+        Capistrano::CLI.ui.ask "default gateway" do |q|
           q.default = '192.168.1.1'
         end 
       }
@@ -61,6 +61,7 @@ Capistrano::Configuration.instance(:must_exist).load do
     
        ]
        
+      # XXX need to set the order for these as it breaks sudo currently
       desc "Update system networking configuration"
       task :config do
         SYSTEM_CONFIG_FILES[:network].each do |file|
