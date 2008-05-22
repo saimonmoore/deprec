@@ -48,12 +48,14 @@ module Apt
 
   # Run an apt distribution upgrade
   def dist_upgrade(options={})
+    update
     send(run_method, %{sh -c "#{APT_GET} -qy dist-upgrade"}, options)
   end
 
   # Run an apt upgrade. Use dist_upgrade instead if you want to upgrade
   # the critical base packages.
   def upgrade(options={})
+    update
     send(run_method, %{sh -c "#{APT_GET} -qy upgrade"}, options)
   end
 
