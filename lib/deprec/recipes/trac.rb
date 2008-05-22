@@ -3,14 +3,17 @@ Capistrano::Configuration.instance(:must_exist).load do
   namespace :deprec do namespace :trac do
         
   # Master tracd process for server
-  set :tracd_cmd, '/usr/local/bin/tracd'
+  set :tracd_cmd, '/usr/bin/tracd'
   set :tracd_port, '9000'
   set :tracd_pidfile, '/var/run/tracd.pid'
   
   # Settings for this projects trac instance
+  set(:tracd_domain_root) { domain.sub(/.*?\./,'') } # strip subdomain from domain
+  set(:tracd_vhost_domain) { "trac-#{application}.#{tracd_domain_root}" } # nginx will proxy this domain to tracd
+  
   set(:trac_backup_dir) { "#{backup_dir}/trac" }
   set(:trac_path) { exists?(:deploy_to) ? "#{deploy_to}/trac" : Capistrano::CLI.ui.ask('path to trac config') }
-  set(:tracd_parent_dir) { "#{deploy_to}/../trac/projects" }
+  set(:tracd_parent_dir) { "/etc/trac.d" }
   set(:trac_password_file)  { "#{trac_path}/conf/users.htdigest" }
   set(:trac_account) { Capistrano::CLI.prompt('enter new trac user account name') }
   set :trac_passwordfile_exists, true # hack - should check on remote system instead
@@ -46,19 +49,17 @@ Capistrano::Configuration.instance(:must_exist).load do
   
   desc "Install trac on server"
   task :install, :roles => :scm do
-    version = 'trac-0.10.4'
-    set :src_package, {
-      :file => version + '.tar.gz',   
-      :md5sum => '52a3a21ad9faafc3b59cbeb87d5a69d2  trac-0.10.4.tar.gz', 
-      :dir => version,  
-      :url => "http://ftp.edgewall.com/pub/trac/#{version}.tar.gz",
-      :unpack => "tar zxf #{version}.tar.gz;",
-      :install => 'python ./setup.py install --prefix=/usr/local;'
-    }
-    enable_universe
-    apt.install( {:base => %w(build-essential wget python-sqlite sqlite python-clearsilver)}, :stable )
-    deprec2.download_src(src_package, src_dir)
-    deprec2.install_from_src(src_package, src_dir)
+    install_deps
+    sudo "easy_install Trac==0.11rc1"
+    create_pid_dir
+    create_parent_dir
+    config_gen_system
+    config_system
+    activate_system
+  end
+  
+  task :install_deps do
+    apt.install( {:base => %w(sqlite3 python-setuptools python-subversion)}, :stable )
   end
   
   # The start script has a couple of config values in it.
@@ -72,13 +73,18 @@ Capistrano::Configuration.instance(:must_exist).load do
   ]
   
   PROJECT_CONFIG_FILES[:trac] = [
+    {:template => 'users.htdigest.erb',
+     :path => "conf/users.htdigest",
+     :mode => 0644,
+     :owner => 'root:root'},
+     
     {:template => 'trac.ini.erb',
      :path => "conf/trac.ini",
      :mode => 0644,
      :owner => 'root:root'},
      
-    {:template => 'apache_vhost.conf.erb',
-     :path => "conf/trac_apache_vhost.conf",
+    {:template => 'nginx_vhost.conf.erb',
+     :path => "conf/nginx_vhost.conf",
      :mode => 0644,
      :owner => 'root:root'}
   ]
@@ -105,6 +111,8 @@ Capistrano::Configuration.instance(:must_exist).load do
   task :config, :roles => :scm do
     config_system
     config_project
+    restart
+    top.deprec.nginx.restart
   end
   
   task :config_system, :roles => :scm do
@@ -113,23 +121,25 @@ Capistrano::Configuration.instance(:must_exist).load do
   
   task :config_project, :roles => :scm do
     deprec2.push_configs(:trac, PROJECT_CONFIG_FILES[:trac])
+    symlink_nginx_vhost
   end
 
   desc "Initialize the trac db for this project"
   task :setup, :roles => :scm do
+    init
     config_gen_project
     config_project
-    init
-    set_default_permissions 
+    activate_project
+    # set_default_permissions  # XXX re-enable this
     # create trac account for current user 
     set :trac_account, user
     set :trac_passwordfile_exists, false # hack - should check on remote system instead
-    user_add
-    create_pid_dir
+    # user_add # XXX re-enable
   end
   
   task :init, :roles => :scm do
-    sudo "trac-admin #{trac_path} initenv #{application} sqlite:db/trac.db svn #{repos_root} /usr/local/share/trac/templates"
+    deprec2.mkdir(trac_path, :via => :sudo)
+    sudo "trac-admin #{trac_path} initenv #{application} sqlite:db/trac.db svn #{repos_root}"
   end
   
   task :set_default_permissions, :roles => :scm do
@@ -139,7 +149,6 @@ Capistrano::Configuration.instance(:must_exist).load do
   
   task :start, :roles => :scm do
     sudo "/etc/init.d/tracd start"
-    sudo "/etc/init.d/httpd restart"
   end
 
   task :stop, :roles => :scm do
@@ -174,8 +183,9 @@ Capistrano::Configuration.instance(:must_exist).load do
   end
   
   task :deactivate_project, :roles => :scm do
-    # XXX unlink project config
-    # XXX restart tracd
+    unlink_project
+    unlink_nginx_vhost
+    restart
   end
   
   desc "Create backup of trac repository"
@@ -228,7 +238,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   # Link the trac repos for this project into the master trac repos dir
   # We do this so we can use trac for multiple projects on the same server
   task :symlink_project, :roles => :scm do
-    sudo "ln -sf ../../#{application}/trac #{tracd_parent_dir}/#{application}"
+    sudo "ln -sf #{trac_path} #{tracd_parent_dir}/#{application}"
   end
   
   task :unlink_project, :roles => :scm do
@@ -236,19 +246,32 @@ Capistrano::Configuration.instance(:must_exist).load do
     sudo "test -h #{link} && sudo unlink #{link} || true"
   end
   
-  task :symlink_apache_vhost, :roles => :scm do
-    sudo "ln -sf #{deploy_to}/trac/conf/trac_apache_vhost.conf #{apache_vhost_dir}/#{application}-trac.conf"
+  task :symlink_nginx_vhost, :roles => :scm do
+    sudo "ln -sf #{deploy_to}/trac/conf/nginx_vhost.conf #{nginx_vhost_dir}/tracd-#{application}.conf"
   end
   
-  task :unlink_apache_vhost, :roles => :scm do
-    link = "#{apache_vhost_dir}/#{application}-trac.conf"
+  task :unlink_nginx_vhost, :roles => :scm do
+    link = "#{nginx_vhost_dir}/tracd-#{application}.conf"
     sudo "test -h #{link} && unlink #{link} || true"
   end
-
+  
+  # task :symlink_apache_vhost, :roles => :scm do
+  #   sudo "ln -sf #{deploy_to}/trac/conf/trac_apache_vhost.conf #{apache_vhost_dir}/#{application}-trac.conf"
+  # end
+  # 
+  # task :unlink_apache_vhost, :roles => :scm do
+  #   link = "#{apache_vhost_dir}/#{application}-trac.conf"
+  #   sudo "test -h #{link} && unlink #{link} || true"
+  # end
+  
   task :create_pid_dir, :roles => :scm do
-    deprec.mkdir(File.dirname(tracd_pidfile))
+    deprec2.mkdir(File.dirname(tracd_pidfile))
   end
   
+  task :create_parent_dir, :roles => :scm do
+    deprec2.mkdir(tracd_parent_dir, :via => :sudo)
+  end
+    
 end end
   
 end
