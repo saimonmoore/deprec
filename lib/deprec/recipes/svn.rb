@@ -126,9 +126,12 @@ Capistrano::Configuration.instance(:must_exist).load do
     # http://svnbook.red-bean.com/nightly/en/svn.reposadmin.maint.html#svn.reposadmin.maint.backup
     # XXX do we need this? insane!
     # echo "REPOS_BASE=/var/svn" > ~/.svntoolsrc
-    timestamp = Time.now.utc.strftime("%Y%m%d%H%M%S")
-    dest_dir = File.join(svn_backup_dir, "svn_#{application}_#{timestamp}")
-    run "svn-dump #{application} #{dest_dir}"
+    DATE=`date +%Y%m%d-%a`
+    
+    timestamp = Time.now.strftime("%Y%m%d-%a")
+    deprec2.mkdir(svn_backup_dir, :owner => :root, :group => :deploy, :mode => 0775, :via => :sudo)
+    dest_dir = File.join(svn_backup_dir, "#{application}_#{timestamp}")
+    sudo "svnadmin hotcopy #{repos_root} #{dest_dir}"
   end
 
   task :restore, :roles => :scm do
