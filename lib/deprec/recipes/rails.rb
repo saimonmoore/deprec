@@ -56,14 +56,6 @@ Capistrano::Configuration.instance(:must_exist).load do
       :mode => 0644,
       :owner => 'root:root'}
     ]
-    
-  PROJECT_CONFIG_FILES[:monit] = [
-
-    { :template => 'monit_mongrel.erb',
-      :path => "monit_mongrel.conf", 
-      :mode => 0600,
-      :owner => 'root:root'}
-    ]
 
   namespace :deprec do
     namespace :rails do
@@ -96,10 +88,6 @@ Capistrano::Configuration.instance(:must_exist).load do
         PROJECT_CONFIG_FILES[:nginx].each do |file|
           deprec2.render_template(:nginx, file)
         end
-        
-        PROJECT_CONFIG_FILES[:monit].each do |file|
-          deprec2.render_template(:monit, file)
-        end
         top.deprec.mongrel.config_gen_project
       end
 
@@ -114,11 +102,6 @@ Capistrano::Configuration.instance(:must_exist).load do
       task :symlink_nginx_vhost, :roles => :web do
         sudo "ln -sf #{deploy_to}/nginx/rails_nginx_vhost.conf #{nginx_vhost_dir}/#{application}.conf"
       end
-      
-      task :symlink_monit_config, :roles => :app do
-        sudo "ln -sf #{deploy_to}/monit/monit_mongrel.conf #{monit_confd_dir}/mongrel_#{application}.conf"
-      end
-
 
       task :create_config_dir do
         deprec2.mkdir("#{shared_path}/config", :group => group, :mode => 0775, :via => :sudo)
@@ -268,7 +251,6 @@ Capistrano::Configuration.instance(:must_exist).load do
       
       desc "setup and configure servers"
       task :setup_servers do
-
         top.deprec.nginx.activate       
         top.deprec.mongrel.create_mongrel_user_and_group 
         top.deprec.mongrel.config_gen_project
