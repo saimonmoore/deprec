@@ -222,21 +222,23 @@ Capistrano::Configuration.instance(:must_exist).load do
       
     end
     
-    SRC_PACKAGES[:nrpe] = {
-      :filename => 'nrpe-2.11.tar.gz',   
-      :md5sum => "dcf3b7c5b7c94c0ba6cbb4999c1161f0  nrpe-2.11.tar.gz", 
-      :dir => 'nrpe-2.11',  
-      :url => "http://easynews.dl.sourceforge.net/sourceforge/nagios/nrpe-2.11.tar.gz",
-      :unpack => "tar zxfv nrpe-2.11.tar.gz;",
-      :configure => "./configure --with-nagios-user=#{nagios_user} --with-nagios-group=#{nagios_group} #{ '--enable-command-args' if nrpe_enable_command_args};",
-      :make => 'make all;',
-      :install => 'make install-plugin; make install-daemon; make install-daemon-config;'
-    }
+
     
     namespace :nrpe do
       
       set :nrpe_enable_command_args, false # set to true to compile nrpe to accept arguments
 	                                       # note that you'll need to set it before these recipes are loaded (e.g. in .caprc)
+      
+      SRC_PACKAGES[:nrpe] = {
+        :filename => 'nrpe-2.11.tar.gz',   
+        :md5sum => "dcf3b7c5b7c94c0ba6cbb4999c1161f0  nrpe-2.11.tar.gz", 
+        :dir => 'nrpe-2.11',  
+        :url => "http://easynews.dl.sourceforge.net/sourceforge/nagios/nrpe-2.11.tar.gz",
+        :unpack => "tar zxfv nrpe-2.11.tar.gz;",
+        :configure => "./configure --with-nagios-user=#{nagios_user} --with-nagios-group=#{nagios_group} #{ '--enable-command-args' if nrpe_enable_command_args};",
+        :make => 'make all;',
+        :install => 'make install-plugin; make install-daemon; make install-daemon-config;'
+      }
     
       task :install do
         install_deps
