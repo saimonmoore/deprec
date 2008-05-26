@@ -1,6 +1,6 @@
 <% mongrel_servers.times do |counter| -%>
   check process mongrel-<%=mongrel_port+counter%> with pidfile <%= mongrel_pid_dir %>/mongrel.<%=mongrel_port+counter%>.pid
-	group mongrel
+	group mongrel_<%= application %>
 	start program = "/usr/local/bin/ruby /usr/local/bin/mongrel_rails cluster::start --clean -C <%= mongrel_conf %> --only <%=mongrel_port+counter%>"
 	stop program = "/usr/local/bin/ruby /usr/local/bin/mongrel_rails cluster::stop -C <%= mongrel_conf %> --only <%=mongrel_port+counter%>"
 		
