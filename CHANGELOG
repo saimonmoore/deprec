@@ -1,5 +1,19 @@
 == SVN
 
+== 1.99.19 (June 3, 2008)
+
+* feature: added logrotate. configs generated for nginx and mongrel
+* bugfix: monit:install was calling monit:activate but this won't work will monit:config is called. 
+
+== 1.99.18 (May  28, 2008)
+
+* bugfix: nagios config option was not being set till after required
+
+== 1.99.17 (May  22, 2008)
+
+* monit config for mongrel now lives under config/mongrel instead of config/monit
+  This way, monit configs for services can live with the recipes/templates for that service.
+
 == 1.99.16 (May  5, 2008)
 
 * change: start mongrel using mongrel_cluster with --clean option so mongrel 
