@@ -230,6 +230,7 @@ Capistrano::Configuration.instance(:must_exist).load do
         top.deprec.nginx.config_gen
         top.deprec.mongrel.config_gen_system
         top.deprec.monit.config_gen
+        top.deprec.logrotate.config_gen
         
         # Nginx as our web frontend
         top.deprec.nginx.install
@@ -256,6 +257,11 @@ Capistrano::Configuration.instance(:must_exist).load do
         
         # Install rails
         top.deprec.rails.install
+        
+        # Install logrotate
+        top.deprec.logrotate.install
+        top.deprec.logrotate.config
+        
       end
       
       desc "setup and configure servers"
