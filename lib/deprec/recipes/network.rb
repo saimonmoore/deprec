@@ -60,7 +60,7 @@ Capistrano::Configuration.instance(:must_exist).load do
          :mode => 0644,
          :owner => 'root:root'}
       ]
-    
+
       desc "Generate configuration file(s) for networking"
       task :config_gen do
         SYSTEM_CONFIG_FILES[:network].each do |file|
