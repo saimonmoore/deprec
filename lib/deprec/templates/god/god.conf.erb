@@ -1,1 +1,20 @@
+God::Contacts::Email.message_settings = {
+  :from => 'god@<%= domain %>'
+}
+
+God::Contacts::Email.server_settings = {
+  :address => "smtp.<%= domain %>",
+  :port => 25,
+  :domain => "<%= domain %>",
+  :authentication => :plain,
+  :user_name => "john",
+  :password => "s3kr3ts"
+}
+
+God.contact(:email) do |c|
+  c.name = '<%= user %>'
+  c.email = '<%= user %>@<%= domain %>'
+  c.group = 'developers'
+end
+
 God.load "/etc/god/conf/*.god"

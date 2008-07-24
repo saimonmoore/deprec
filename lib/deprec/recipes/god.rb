@@ -3,8 +3,6 @@ Capistrano::Configuration.instance(:must_exist).load do
   namespace :deprec do 
     namespace :god do
         
-      set :god_user,  'god'
-      set :god_group, 'god'
       set(:god_log_dir) { "#{deploy_to}/shared/log" }
       set(:god_pid_dir) { "#{deploy_to}/shared/pids" }
       set :god_dir, '/etc/god'
@@ -27,7 +25,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       # Install 
       
       desc "Install god"
-      task :install, :roles => :app do
+      task :install, :roles => :app do        
         gem2.install 'god'
       end
       
@@ -103,71 +101,75 @@ Capistrano::Configuration.instance(:must_exist).load do
       end
       
       task :config_system, :roles => :app do
+        deprec2.mkdir(god_dir, :via => :sudo)        
+        deprec2.mkdir(god_log_dir, :via => :sudo)        
+        deprec2.mkdir(god_pid_dir, :via => :sudo)        
         deprec2.push_configs(:god, SYSTEM_CONFIG_FILES[:god])
       end
       
       task :config_project, :roles => :app do
-        create_god_user_and_group
         deprec2.push_configs(:god, PROJECT_CONFIG_FILES[:god])
-        symlink_mongrel_cluster
-        symlink_monit_config
+        symlink_mongrel_config
+        symlink_mysql_config
+        symlink_nginx_config
+        symlink_nginx_config
         symlink_logrotate_config
       end
       
-      task :symlink_monit_config, :roles => :app do
-        deprec2.mkdir(monit_confd_dir, :via => :sudo)
-        sudo "ln -sf #{deploy_to}/mongrel/monit.conf #{monit_confd_dir}/mongrel_#{application}.conf"
+      task :symlink_mongrel_config, :roles => :app do
+        deprec2.mkdir(god_conf_dir, :via => :sudo)
+        sudo "ln -sf #{deploy_to}/god/god_mongrel.god #{god_conf_dir}/mongrel_#{application}.god"
       end
       
-      task :unlink_monit_config, :roles => :app do
-        sudo "test -L #{monit_confd_dir}/mongrel_#{application}.conf && unlink #{monit_confd_dir}/mongrel_#{application}.conf"
+      task :unlink_mongrel_config, :roles => :app do
+        sudo "test -L #{god_conf_dir}/mongrel_#{application}.god && unlink #{god_conf_dir}/mongrel_#{application}.god"
       end
       
-      
-      desc "create user and group for god to run as"
-      task :create_god_user_and_group, :roles => :app do
-        deprec2.groupadd(god_group) 
-        deprec2.useradd(god_user, :group => god_group, :homedir => false)
-        # Set the primary group for the mongrel user (in case user already existed
-        # when previous command was run)
-        sudo "usermod --gid #{god_group} #{god_user}"
+      task :symlink_mysql_config, :roles => :app do
+        deprec2.mkdir(god_conf_dir, :via => :sudo)
+        sudo "ln -sf #{deploy_to}/god/god_mysql.god #{god_conf_dir}/mysql_#{application}.god"
       end
       
-      desc "set group ownership and permissions on dirs god needs to write to"
-      task :set_perms_for_god_dirs, :roles => :app do
-        tmp_dir = "#{deploy_to}/current/tmp"
-        shared_dir = "#{deploy_to}/shared"
-        files = ["#{god_log_dir}/god.log"]
-
-        sudo "chgrp -R #{god_group} #{tmp_dir} #{shared_dir}"
-        sudo "chmod -R g+w #{tmp_dir} #{shared_dir}" 
-        # set owner and group of log files 
-        files.each { |file|
-          sudo "touch #{file}"
-          sudo "chown #{god_user} #{file}"   
-          sudo "chgrp #{god_group} #{file}" 
-          sudo "chmod g+w #{file}"   
-        } 
-      end            
-
+      task :unlink_mysql_config, :roles => :app do
+        sudo "test -L #{god_conf_dir}/mysql_#{application}.god && unlink #{god_conf_dir}/mysql_#{application}.god"
+      end
+      
+      task :symlink_nginx_config, :roles => :app do
+        deprec2.mkdir(god_conf_dir, :via => :sudo)
+        sudo "ln -sf #{deploy_to}/god/god_nginx.god #{god_conf_dir}/nginx_#{application}.god"
+      end
+      
+      task :unlink_nginx_config, :roles => :app do
+        sudo "test -L #{god_conf_dir}/nginx_#{application}.god && unlink #{god_conf_dir}/nginx_#{application}.god"
+      end
+      
+      task :symlink_thin_config, :roles => :app do
+        deprec2.mkdir(god_conf_dir, :via => :sudo)
+        sudo "ln -sf #{deploy_to}/god/god_thin.god #{god_conf_dir}/thin_#{application}.god"
+      end
+      
+      task :unlink_thin_config, :roles => :app do
+        sudo "test -L #{god_conf_dir}/thin_#{application}.god && unlink #{god_conf_dir}/thin_#{application}.god"
+      end
+      
       desc "Start god"
       task :start, :roles => :app do
-        send(run_method, "/home/techimp/testing/etc/init.d/god start")
+        sudo "/etc/init.d/god start"
       end
 
       desc "Stop god"
       task :stop, :roles => :app  do
-        send(run_method, "/home/techimp/testing/etc/init.d/god stop")
+        sudo "/etc/init.d/god stop"
       end
 
       desc "Restart god"
       task :restart, :roles => :app  do
-        send(run_method, "/home/techimp/testing/etc/init.d/god restart")
+        send "/etc/init.d/god restart"
       end
 
       desc "Reload god"
       task :reload, :roles => :app  do
-        send(run_method, "/home/techimp/testing/etc/init.d/god reload")
+        sudo "/etc/init.d/god reload"
       end
    
       desc <<-DESC
@@ -175,7 +177,7 @@ Capistrano::Configuration.instance(:must_exist).load do
         Setup server to start god on boot.
       DESC
       task :activate do
-        send(run_method, "update-rc.d god defaults")
+        sudo "update-rc.d god defaults"
       end
   
       desc <<-DESC
@@ -183,7 +185,7 @@ Capistrano::Configuration.instance(:must_exist).load do
         Setup server to start god on boot.
       DESC
       task :deactivate do
-        send(run_method, "update-rc.d -f god remove")
+        sudo "update-rc.d -f god remove"
       end
   
       task :backup do
