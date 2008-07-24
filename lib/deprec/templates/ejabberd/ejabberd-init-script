@@ -1,0 +1,71 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides: ejabberd
+# Default-Start:  2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: start and stop ejabberd
+# Description: monitoring by ejabberd.
+### END INIT INFO
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DESC="erlang xmpp messaging server"
+NAME=ejabberd
+DAEMON=ejabberdctl
+CONFIGFILEDIR=/etc/ejabberd
+LOGFILE=/var/log/ejabberd/$NAME.log
+SCRIPTNAME=/etc/init.d/$NAME
+
+# Check if DAEMON binary exist
+test -f $DAEMON || exit 0
+
+ARGS="-l $LOGFILE"
+
+RETVAL=0
+set -e
+
+d_start() {
+start-stop-daemon --start --quiet \
+	--exec $DAEMON > /dev/null 2>&1 -- $ARGS
+  $DAEMON --logs $LOGFILE start
+}
+
+d_stop() {
+start-stop-daemon --retry 5 --oknodo --stop --quiet \
+	--exec $DAEMON  > /dev/null 2>&1 -- $ARGS
+  $DAEMON stop	
+}
+
+d_reload() {
+  echo -en "\n can't reload"
+}
+
+case "$1" in
+  start)
+    echo -n "Starting $DESC: $NAME"
+    d_start
+        echo "."
+  ;;
+  stop)
+    echo -n "Stopping $DESC: $NAME"
+    d_stop
+        echo "."
+  ;;
+  reload)
+    echo -n "Reloading $DESC configuration..."
+    d_reload
+        echo "."
+  ;;
+  restart)
+    echo -n "Restarting $DESC: $NAME"
+    d_stop
+    sleep 5
+    d_start
+    echo "."
+  ;;
+  *)
+    echo "Usage: $SCRIPTNAME {start|stop|restart|reload}" >&2
+    exit 3
+  ;;
+esac
+
+exit 0
