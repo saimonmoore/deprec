@@ -27,7 +27,7 @@ set -e
 d_start() {
 start-stop-daemon --start --quiet --pidfile /var/run/$NAME.pid \
 	--exec $DAEMON > /dev/null 2>&1 -- $ARGS
-  for file in `ls -1 $CONFIGFILEDIR/*.god`; do $DAEMON load $file; done
+  $DAEMON -c $CONFIGFILEDIR/god.conf -P $PIDFILE -l $LOGFILE
 }
 
 d_stop() {
