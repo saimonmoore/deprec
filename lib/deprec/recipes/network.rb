@@ -41,7 +41,12 @@ Capistrano::Configuration.instance(:must_exist).load do
           q.default = '203.8.183.1 4.2.2.1'
         end 
       }
+<<<<<<< HEAD:lib/deprec/recipes/network.rb
       
+=======
+
+            
+>>>>>>> 7133525a75ab42b90319c09a7350f7847b8226d5:lib/deprec/recipes/network.rb
       SYSTEM_CONFIG_FILES[:network] = [
 
         {:template => "interfaces.erb",
@@ -58,6 +63,7 @@ Capistrano::Configuration.instance(:must_exist).load do
          :path => '/etc/hostname',
          :mode => 0644,
          :owner => 'root:root'}
+<<<<<<< HEAD:lib/deprec/recipes/network.rb
     
        ]
        
@@ -69,13 +75,36 @@ Capistrano::Configuration.instance(:must_exist).load do
         end
       end
       
+=======
+      ]
+
+      desc "Generate configuration file(s) for networking"
+      task :config_gen do
+        SYSTEM_CONFIG_FILES[:network].each do |file|
+          deprec2.render_template(:network, file)
+        end
+      end
+      
+      desc 'Deploy configuration files(s) for networking configuration' 
+      task :config do
+        deprec2.push_configs(:network, SYSTEM_CONFIG_FILES[:network])
+      end
+
+>>>>>>> 7133525a75ab42b90319c09a7350f7847b8226d5:lib/deprec/recipes/network.rb
       desc "Restart network interface"
       task :restart do
         sudo '/etc/init.d/networking restart'
       end
       
+<<<<<<< HEAD:lib/deprec/recipes/network.rb
       
     end
   end
   
 end
+=======
+    end
+  end
+  
+end
+>>>>>>> 7133525a75ab42b90319c09a7350f7847b8226d5:lib/deprec/recipes/network.rb

@@ -185,7 +185,7 @@ module Deprec2
     # XXX if options[:requires_sudo] and :use_sudo then use sudo
     sudo <<-END
     sh -c '
-    grep -F "#{value}" #{filename} > /dev/null 2>&1 || 
+    grep -F "#{value}" #{filename} > /dev/null 2>&1 ||
     echo "#{value}" >> #{filename}
     '
     END
@@ -385,7 +385,7 @@ module Deprec2
       end
     end
   end
-  
+
 end
 
 Capistrano.plugin :deprec2, Deprec2

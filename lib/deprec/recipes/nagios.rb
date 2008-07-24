@@ -5,13 +5,14 @@ Capistrano::Configuration.instance(:must_exist).load do
       
       set :nagios_user, 'nagios'
       set :nagios_group, 'nagios'
-      set(:nagios_host) { Capistrano::CLI.ui.ask "Enter hostname of nagios server" }
       set :nagios_cmd_group, 'nagcmd' # Allow external commands to be submitted through the web interface
-      default :application, 'nagios' 
       
       SRC_PACKAGES[:nagios] = {
-        :url => "http://internap.dl.sourceforge.net/sourceforge/nagios/nagios-3.0.2.tar.gz",
-        :md5sum => "008d71aac08660bc007f7130ea82ab80  nagios-3.0.2.tar.gz", 
+        :filename => 'nagios-3.0rc1.tar.gz',   
+        :md5sum => "d8b4fbf1c2527ddcc18a39372a41dba3  nagios-3.0rc1.tar.gz", 
+        :dir => 'nagios-3.0rc1',  
+        :url => "http://osdn.dl.sourceforge.net/sourceforge/nagios/nagios-3.0rc1.tar.gz",
+        :unpack => "tar zxfv nagios-3.0rc1.tar.gz;",
         :configure => %w(
           ./configure 
           --with-command-group=nagcmd
@@ -30,7 +31,6 @@ Capistrano::Configuration.instance(:must_exist).load do
         deprec2.mkdir('/usr/local/nagios/objects', :owner => "#{nagios_user}.#{nagios_group}", :via => :sudo)
         deprec2.download_src(SRC_PACKAGES[:nagios], src_dir)
         deprec2.install_from_src(SRC_PACKAGES[:nagios], src_dir)
-        activate
       end
       
       task :create_nagios_user do
@@ -38,8 +38,6 @@ Capistrano::Configuration.instance(:must_exist).load do
         deprec2.useradd(nagios_user, :group => nagios_group, :homedir => false)
         deprec2.groupadd(nagios_cmd_group)
         deprec2.add_user_to_group(nagios_user, nagios_cmd_group)
-        # Add apache user to nagios group to permit commands via web interface
-        deprec2.add_user_to_group(apache_user, nagios_cmd_group)
       end
          
       # Install dependencies for nagios
@@ -125,7 +123,6 @@ Capistrano::Configuration.instance(:must_exist).load do
       
       desc "Push nagios config files to server"
       task :config, :roles => :nagios do
-        set :application, 'nagios'
         deprec2.push_configs(:nagios, SYSTEM_CONFIG_FILES[:nagios])
         sudo "ln -sf #{deploy_to}/nagios/conf/nagios_apache_vhost.conf /usr/local/apache2/conf/apps"
         config_check
@@ -140,7 +137,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       desc "Set Nagios to start on boot"
       task :activate, :roles => :nagios do
         send(run_method, "update-rc.d nagios defaults")
-        sudo "ln -sf #{deploy_to}/nagios/conf/nagios_apache_vhost.conf /usr/local/apache2/conf/apps"
+        sudo "ln -sf #{deploy_to}/nagios/conf/nagios_apache_vhost.conf #{apache_vhost_dir}/nagios_#{application}.conf"
       end
       
       desc "Set Nagios to not start on boot"
@@ -149,6 +146,7 @@ Capistrano::Configuration.instance(:must_exist).load do
         link = "#{apache_vhost_dir}/nagios_#{application}.conf"
         sudo "test -h #{link} && sudo unlink #{link} || true"
       end
+      
       
       # Control
 
@@ -195,15 +193,20 @@ Capistrano::Configuration.instance(:must_exist).load do
     
     end
     
+    
     SRC_PACKAGES[:nagios_plugins] = {
-      :url => "http://downloads.sourceforge.net/nagiosplug/nagios-plugins-1.4.12.tar.gz",
-      :md5sum => "af68d00bbe2c39de02803d23e5eecca3  nagios-plugins-1.4.12.tar.gz", 
+      :filename => 'nagios-plugins-1.4.11.tar.gz',   
+      :md5sum => "042783a2180a6987e0b403870b3d01f7  nagios-plugins-1.4.11.tar.gz", 
+      :dir => 'nagios-plugins-1.4.11',  
+      :url => "http://osdn.dl.sourceforge.net/sourceforge/nagiosplug/nagios-plugins-1.4.11.tar.gz",
+      :unpack => "tar zxfv nagios-plugins-1.4.11.tar.gz;",
       :configure => "./configure --with-nagios-user=#{nagios_user} --with-nagios-group=#{nagios_group};",
+      :make => 'make;',
+      :install => 'make install;'
     }   
           
     namespace :nagios_plugins do
     
-      desc "Install nagios plugins"
       task :install do
         install_deps
         top.deprec.nagios.create_nagios_user
@@ -220,20 +223,23 @@ Capistrano::Configuration.instance(:must_exist).load do
     end
     
 
+    
     namespace :nrpe do
       
-      default :nrpe_enable_command_args, false # set to true to compile nrpe to accept arguments
+      set :nrpe_enable_command_args, false # set to true to compile nrpe to accept arguments
 	                                       # note that you'll need to set it before these recipes are loaded (e.g. in .caprc)
       
       SRC_PACKAGES[:nrpe] = {
-        :url => "http://downloads.sourceforge.net/nagios/nrpe-2.12.tar.gz",
-        :md5sum => "b2d75e2962f1e3151ef58794d60c9e97  nrpe-2.12.tar.gz", 
+        :filename => 'nrpe-2.11.tar.gz',   
+        :md5sum => "dcf3b7c5b7c94c0ba6cbb4999c1161f0  nrpe-2.11.tar.gz", 
+        :dir => 'nrpe-2.11',  
+        :url => "http://easynews.dl.sourceforge.net/sourceforge/nagios/nrpe-2.11.tar.gz",
+        :unpack => "tar zxfv nrpe-2.11.tar.gz;",
         :configure => "./configure --with-nagios-user=#{nagios_user} --with-nagios-group=#{nagios_group} #{ '--enable-command-args' if nrpe_enable_command_args};",
         :make => 'make all;',
         :install => 'make install-plugin; make install-daemon; make install-daemon-config;'
       }
     
-      desc 'Install NRPE'
       task :install do
         install_deps
         top.deprec.nagios.create_nagios_user
@@ -259,18 +265,9 @@ Capistrano::Configuration.instance(:must_exist).load do
         {:template => 'nrpe.cfg.erb',
          :path => "/usr/local/nagios/etc/nrpe.cfg",
          :mode => 0644,
-         :owner => 'nagios:nagios'}, # XXX hard coded file owner is bad...
+         :owner => 'nagios:nagios'} # XXX hard coded file owner is bad...
                                     # It's done here because we aren't using 
                                     # lazy eval in hash constant.
-        {:template => "check_mongrel_cluster.rb",
-         :path => '/usr/local/nagios/libexec/check_mongrel_cluster.rb',
-         :mode => 0755,
-         :owner => 'root:root'},
-         
-         {:template => "check_linux_free_memory.pl",
-          :path => '/usr/local/nagios/libexec/check_linux_free_memory.pl',
-          :mode => 0755,
-          :owner => 'root:root'}
       
       ]
       

@@ -3,13 +3,6 @@ Capistrano::Configuration.instance(:must_exist).load do
   namespace :deprec do
     namespace :xen do
       
-      # Config variables for migration
-      default(:xen_slice) { Capistrano::CLI.ui.ask("Slice name") }
-      default(:xen_old_host) { Capistrano::CLI.ui.ask("Old Xen host") }
-      default(:xen_new_host) { Capistrano::CLI.ui.ask("New Xen host") }
-      set(:xen_disk_size) { Capistrano::CLI.ui.ask("Disk size (GB)") }
-      set(:xen_swap_size) { Capistrano::CLI.ui.ask("Swap size (GB)") }
-      
       # ref: http://www.eadz.co.nz/blog/article/xen-gutsy.html
       
       SYSTEM_CONFIG_FILES[:xen] = [
@@ -57,7 +50,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       desc "Install Xen"
       task :install, :roles => :dom0 do
         install_deps
-        enable_hardy_domu
+        # it's all in deps baby
       end
       
       task :install_deps do
@@ -112,93 +105,13 @@ Capistrano::Configuration.instance(:must_exist).load do
       task :info do
         sudo "xm info"
       end
-
-      desc "Migrate a slice on one Xen host to another. Slice is stopped, disk is tar'd up and transferred to new host."
-      task :migrate do
-
-        # Get user input for these values
-        xen_old_host && xen_new_host && xen_disk_size && xen_swap_size && xen_slice
-
-        copy_disk
-        copy_slice_config
-        create_lvm_disks
-        build_slice_from_tarball
-      end
-
-
-      task :copy_disk do
-        mnt_dir = "/mnt/#{xen_slice}-disk"
-      	tarball = "/tmp/#{xen_slice}-disk.tar"
-      	lvm_disk = "/dev/vm_local/#{xen_slice}-disk"
-
-        # Shutdown slice
-      	sudo "xm list | grep #{xen_slice} && xm shutdown #{xen_slice} && sleep 10; exit 0", :hosts => xen_old_host
-
-      	# Tar up disk partition
-      	sudo "test -d #{mnt_dir} || #{sudo} mkdir #{mnt_dir}; exit 0", :hosts => xen_old_host
-      	sudo "mount | grep #{mnt_dir} || #{sudo} mount -t auto #{lvm_disk} #{mnt_dir}; exit 0", :hosts => xen_old_host
-      	sudo "sh -c 'cd #{mnt_dir} && tar cfp #{tarball} *'", :hosts => xen_old_host
-        sudo "umount #{mnt_dir}", :hosts => xen_old_host
-        sudo "rmdir #{mnt_dir}", :hosts => xen_old_host
-
-      	# start slice again if necessary
-      	# xm create ${SLICE}.cfg
-
-      	# copy to other server
-      	run "scp #{tarball} #{xen_new_host}:/tmp/", :hosts => xen_old_host
-
-      	# clean up tarball
-      	sudo "rm #{tarball}", :hosts => xen_old_host
-      end
-
-      task :copy_slice_config do
-        run "scp /etc/xen/#{xen_slice}.cfg #{xen_new_host}:", :hosts => xen_old_host
-        sudo "test -f /etc/xen/#{xen_slice}.cfg || #{sudo} mv #{xen_slice}.cfg /etc/xen/", :hosts => xen_new_host
-      end
-
-      task :create_lvm_disks do
-        xen_new_host
-        # create lvm disks on new host
-        disks = {"#{xen_slice}-disk" => xen_disk_size, "#{xen_slice}-swap" => xen_swap_size}
-        disks.each { |disk, size|
-          puts "Creating #{disk} (#{size} GB)"
-          sudo "lvcreate -L #{size}G -n #{disk} vm_local", :hosts => xen_new_host
-          sudo "mkfs.ext3 /dev/vm_local/#{disk}", :hosts => xen_new_host
-        }
-      end
-
-      task :build_slice_from_tarball do
-        mnt_dir = "/mnt/#{xen_slice}-disk"
-      	tarball = "/tmp/#{xen_slice}-disk.tar"
-      	lvm_disk = "/dev/vm_local/#{xen_slice}-disk"
-
-      	# untar archive into lvm disk
-      	sudo "test -d #{mnt_dir} || #{sudo} mkdir #{mnt_dir}; exit 0", :hosts => xen_new_host
-      	sudo "mount | grep #{mnt_dir} || #{sudo} mount -t auto #{lvm_disk} #{mnt_dir}; exit 0", :hosts => xen_new_host
-      	sudo "sh -c 'cd #{mnt_dir} && tar xf #{tarball}'", :hosts => xen_new_host
-        sudo "umount #{mnt_dir}", :hosts => xen_new_host
-        sudo "rmdir #{mnt_dir}", :hosts => xen_new_host
-      end
       
-      desc "Enable hardy heron domU's on gutsy dom0"
-      task :enable_hardy_domu, :roles => :dom0 do
-        # create debootstrap symlink
-        sudo "ln -sf /usr/lib/debootstrap/scripts/gutsy /usr/lib/debootstrap/scripts/hardy"
-        # link xen-tools hooks
-        sudo "ln -sf /usr/lib/xen-tools/edgy.d /usr/lib/xen-tools/hardy.d"
-      end
       
-      task :touch_hwclock do
-        sudo "touch /etc/init.d/hwclock.sh"
-      end
+      
       
     end
   end
 end
-
-# why is this missing on 
-
-
 
 # Stop the 'incrementing ethX problem'
 #

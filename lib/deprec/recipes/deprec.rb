@@ -23,7 +23,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   
   # For each service, the details of the file to download and options
   # to configure, build and install the service
-  SRC_PACKAGES = {} unless defined?(SRC_PACKAGES)
+  SRC_PACKAGES = {}
   
   # Server options
   CHOICES_WEBSERVER = [:nginx, :apache, :none]
@@ -80,13 +80,12 @@ Capistrano::Configuration.instance(:must_exist).load do
   #   :invoke_command "command", :via => run_method
   # override this value if sudo is not an option
   # in that case, your use will need the correct privileges
-  default :run_method, :sudo 
+  default :run_method, 'sudo' 
 
   default(:backup_dir) { '/var/backups'}  
 
   # XXX rails deploy stuff
-  set :apps_root,     File.join( %w(/ opt apps) )          # parent dir for apps
-  default(:deploy_to)    { File.join(apps_root, application) } # dir for current app
+  default(:deploy_to)    { File.join( %w(/ var www apps) << application ) }
   default(:current_path) { File.join(deploy_to, "current") }
   default(:shared_path)  { File.join(deploy_to, "shared") }
 
@@ -144,43 +143,11 @@ Capistrano::Configuration.instance(:must_exist).load do
     # Copy files from src/ to /usr/local/src/ on remote hosts
     task :push_src do
       SRC_PACKAGES.each do |key, src_package| 
-        deprec2.set_package_defaults(src_package)
         file = File.join('src', src_package[:filename])
         if File.exists?(file)
           std.su_put(File.read(file), "#{src_dir}/#{src_package[:filename]}", '/tmp/')
         end
       end
-    end
-    
-    task :list_src do
-      # XXX ugly line - look away
-      max_key_size = SRC_PACKAGES.keys.max{|a,b| a.to_s.size <=> b.to_s.size}.to_s.size
-      SRC_PACKAGES.each{|key, src_package| 
-        deprec2.set_package_defaults(src_package)
-        puts "#{key}#{' '*(max_key_size+1-key.to_s.size)}: #{src_package[:url]}"
-      }
-    end
-    
-    task :find_src do
-      # XXX ugly line - look away
-      max_key_size = SRC_PACKAGES.keys.max{|a,b| a.to_s.size <=> b.to_s.size}.to_s.size
-      SRC_PACKAGES.each{|key, src_package| 
-        deprec2.set_package_defaults(src_package)
-        puts "#{key}#{' '*(max_key_size+1-key.to_s.size)}: #{src_package[:url]}"
-        puts `find . -name #{src_package[:filename]}`
-        puts
-      }
-    end
-    
-    task :recover_src do
-      # XXX ugly line - look away
-      max_key_size = SRC_PACKAGES.keys.max{|a,b| a.to_s.size <=> b.to_s.size}.to_s.size
-      SRC_PACKAGES.each{|key, src_package| 
-        puts "#{key}#{' '*(max_key_size+1-key.to_s.size)}: #{src_package[:url]}"
-        file = `find . -name #{src_package[:filename]}`.split[0]
-        `cp #{file} src/` if file
-        puts
-      }
     end
      
   end

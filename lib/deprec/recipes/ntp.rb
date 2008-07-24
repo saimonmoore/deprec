@@ -3,15 +3,12 @@ Capistrano::Configuration.instance(:must_exist).load do
   namespace :deprec do 
     namespace :ntp do
 
+
       # Install      
 
       desc "Install ntp"
       task :install do
         install_deps
-        SYSTEM_CONFIG_FILES[:ntp].each do |file|
-          deprec2.render_template(:ntp, file.merge(:remote => true))
-        end
-        activate
       end
 
       # install dependencies for nginx
@@ -43,12 +40,12 @@ Capistrano::Configuration.instance(:must_exist).load do
       end
 
       desc 'Enable ntp start scripts on server.'
-      task :activate do
+      task :activate, :roles => :web do
         send(run_method, "update-rc.d ntp defaults")
       end
 
       desc 'Disable ntp start scripts on server.'
-      task :deactivate do
+      task :deactivate, :roles => :web do
         send(run_method, "update-rc.d -f ntp remove")
       end
 
@@ -97,7 +94,3 @@ end
 # DNS OK: 0.009 seconds response time. astro.blocksglobal.com returns 116.240.200.167|time=0.008744s;;;0.000000
 #
 #
-
-# reconfigure timezone on hardy
-# 
-# dpkg-reconfigure tzdata

@@ -8,9 +8,6 @@ Capistrano::Configuration.instance(:must_exist).load do
       desc "Install logrotate"
       task :install do
         install_deps
-        SYSTEM_CONFIG_FILES[:logrotate].each do |file|
-          deprec2.render_template(:logrotate, file.merge(:remote => true))
-        end
       end
 
       # install dependencies for nginx
@@ -43,11 +40,6 @@ Capistrano::Configuration.instance(:must_exist).load do
       # Control
       #
       # logrotate is run via cron with a script in /etc/cron.daily/logrotate 
-      
-      desc "Force logrotate to run"
-      task :force do
-        sudo "logrotate -f /etc/logrotate.conf"
-      end
 
     end 
   end
