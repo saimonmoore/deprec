@@ -35,6 +35,14 @@ module Apt
       sh -c "#{APT_GET} -qyu --force-yes #{special_options.to_s} install #{package_list(packages, version)}"
     }, options)
   end
+  
+  def build_dep(packages, version, options={})
+    update
+    special_options="--allow-unauthenticated" if version != :stable
+    send(run_method, %{
+      sh -c "#{APT_GET} -qyu --force-yes #{special_options.to_s} build-dep #{package_list(packages, version)}"
+    }, options)
+  end  
 
   # Run an apt clean
   def clean(options={})

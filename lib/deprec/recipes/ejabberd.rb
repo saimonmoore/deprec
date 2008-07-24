@@ -11,9 +11,22 @@ Capistrano::Configuration.instance(:must_exist).load do
       # Install 
       
       SRC_PACKAGES[:ejabberd] = {
-        :filename => 'ejabberd-2.0.1.tar.gz',
-        :md5sum => "c09a2ace3c91f45dabbb608b11e48ed1 ejabberd-2.0.1.tar.gz"
+        :filename => 'ejabberd-2.0.1_2.tar.gz',
+        :url => "http://www.process-one.net/downloads/ejabberd/2.0.1/ejabberd-2.0.1_2.tar.gz",        
+        :md5sum => "9c9417ab8dc334094ec7a611016c726e ejabberd-2.0.1_2.tar.gz",
+        :configure => %w(
+            cd src;
+            ./configure
+            --prefix=/usr/local 
+            ;
+          ).reject{|arg| arg.match '#'}.join(' '),        
       }
+      
+      SRC_PACKAGES[:erlang] = {
+        :filename => 'otp_src_R12B-3.tar.gz',
+        :url => "http://erlang.org/download/otp_src_R12B-3.tar.gz",        
+        :md5sum => "c2e7f0ad54b8fadebde2d94106608d97 otp_src_R12B-3.tar.gz"
+      }      
       
       desc "Install ejabberd"
       task :install, :roles => :app do        
@@ -26,7 +39,26 @@ Capistrano::Configuration.instance(:must_exist).load do
       
       # install dependencies for ejabberd
       task :install_deps do
-        apt.install( {:base => %w(flex, libncurses5-dev, libsctp-dev, libssl-dev, m4, openssl, perl, quilt, libexpat-dev, zlib, iconv, erlang)}, :stable )
+        
+        SRC_PACKAGES[:ejabberd] = {
+          :filename => 'ejabberd-2.0.1_2.tar.gz',
+          :url => "http://www.process-one.net/downloads/ejabberd/2.0.1/ejabberd-2.0.1_2.tar.gz",        
+          :md5sum => "9c9417ab8dc334094ec7a611016c726e ejabberd-2.0.1_2.tar.gz",
+          :configure => %w(
+              cd src;
+              ./configure
+              --prefix=/usr/local 
+              ;
+            ).reject{|arg| arg.match '#'}.join(' '),        
+        }
+                
+        apt.install( {:base => %w(flex, libncurses-dev, libsctp-dev, libssl-dev, m4, openssl, perl, quilt, libexpat-dev, zlib, libtext-iconv-perl)}, :stable )
+      end
+      
+      task :install_erlang_from_src do
+        apt.build_dep( {:base => %w(erlang)}, :stable )        
+        deprec2.download_src(SRC_PACKAGES[:erlang], src_dir)
+        deprec2.install_from_src(SRC_PACKAGES[:erlang], src_dir)        
       end
 
       task :create_ejabberd_user do

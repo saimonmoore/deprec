@@ -289,7 +289,16 @@ module Deprec2
     '
     SUDO
   end
+  
+  # checkout source package if we don't already have it
+  def checkout_src_with_svn(src_package, src_dir)
+    set_package_defaults(src_package)
+    create_src_dir
 
+    apt.install( {:base => %w(subversion)}, :stable )
+    # XXX replace with invoke_command
+    sudo "cd #{src_dir} && svn export -q #{src_package[:url] ? "-r #{src_package[:revision]}": ""} #{src_package[:url]} #{src_package[:dir]}"
+  end
 
   ##
   # Run a command and ask for input when input_query is seen.
