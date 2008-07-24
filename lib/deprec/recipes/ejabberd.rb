@@ -24,9 +24,19 @@ Capistrano::Configuration.instance(:must_exist).load do
         activate
       end
       
+      # install dependencies for ejabberd
+      task :install_deps do
+        apt.install( {:base => %w(flex, libncurses5-dev, libsctp-dev, libssl-dev, m4, openssl, perl, quilt, libexpat-dev, zlib, iconv, erlang)}, :stable )
+      end
+
+      task :create_ejabberd_user do
+        deprec2.groupadd(ejabberd_group)
+        deprec2.useradd(ejabberd_user, :group => ejabberd_group, :homedir => false)
+      end
+      
       task :symlink_logrotate_config, :roles => :web do
         sudo "ln -sf /etc/ejabberd/logrotate.conf /etc/logrotate.d/ejabberd"
-      end  
+      end
     
       SYSTEM_CONFIG_FILES[:ejabberd] = [
     
