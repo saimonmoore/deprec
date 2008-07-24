@@ -3,24 +3,11 @@ Capistrano::Configuration.instance(:must_exist).load do
   namespace :deprec do 
     namespace :god do
         
-      set(:god_log_dir) { "#{deploy_to}/shared/log" }
-      set(:god_pid_dir) { "#{deploy_to}/shared/pids" }
+      set(:god_log_dir) { "/var/log" }
+      set(:god_pid_dir) { "/var/run/god" }
       set :god_dir, '/etc/god'
       set :god_conf_dir, '/etc/god/conf'
       set(:god_conf) { "/etc/god/god.conf" }
-  
-      set :god_check_interval, 60
-      set :god_log, 'syslog facility log_daemon'
-      set :god_mailserver, nil
-      set :god_mail_from, "god@#{domain}"
-      set :god_alert_recipients, %w(root@localhost)
-      set :god_timeout_recipients, %w(root@localhost)
-      set :god_webserver_enabled, true
-      set :god_webserver_port, 2812
-      set :god_webserver_address, 'localhost'
-      set :god_webserver_allowed_hosts_and_networks, %w(localhost)
-      set :god_webserver_auth_user, 'admin'
-      set :god_webserver_auth_pass, 'god'
   
       # Install 
       
@@ -30,9 +17,8 @@ Capistrano::Configuration.instance(:must_exist).load do
       end
       
       task :symlink_logrotate_config, :roles => :web do
-        sudo "ln -sf /etc/god/logrotate.conf /etc/logrotate.d/god-#{application}"
-      end
-  
+        sudo "ln -sf /etc/god/logrotate.conf /etc/logrotate.d/god"
+      end  
     
       SYSTEM_CONFIG_FILES[:god] = [
     
