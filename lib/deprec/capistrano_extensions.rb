@@ -300,7 +300,7 @@ module Deprec2
     sudo <<-CMD
     sh -c '
     cd #{src_dir};
-    svn export -q #{src_package[:url] ? "-r #{src_package[:revision]}": ""} #{src_package[:url]} #{src_package[:dir]}
+    svn export -q #{src_package[:revision] ? "-r #{src_package[:revision]}": ""} #{src_package[:url]} #{src_package[:dir]}
     '
     CMD
   end
