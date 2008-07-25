@@ -18,54 +18,33 @@ SCRIPTNAME=/etc/init.d/$NAME
 # Check if DAEMON binary exist
 test -f $DAEMON || exit 0
 
-ARGS="-l $LOGFILE"
-
-RETVAL=0
 set -e
-
-d_start() {
-start-stop-daemon --start --quiet \
-	--exec $DAEMON > /dev/null 2>&1 -- $ARGS
-  $DAEMON --logs $LOGFILE start
-}
-
-d_stop() {
-start-stop-daemon --retry 5 --oknodo --stop --quiet \
-	--exec $DAEMON  > /dev/null 2>&1 -- $ARGS
-  $DAEMON stop	
-}
-
-d_reload() {
-  echo -en "\n can't reload"
-}
 
 case "$1" in
   start)
-    echo -n "Starting $DESC: $NAME"
-    d_start
-        echo "."
-  ;;
+        echo -n "Starting $DESC: "
+        start-stop-daemon --start --quiet \
+                --exec $DAEMON -- start
+        echo "$NAME."
+        ;;
   stop)
-    echo -n "Stopping $DESC: $NAME"
-    d_stop
-        echo "."
-  ;;
-  reload)
-    echo -n "Reloading $DESC configuration..."
-    d_reload
-        echo "."
-  ;;
-  restart)
-    echo -n "Restarting $DESC: $NAME"
-    d_stop
-    sleep 5
-    d_start
-    echo "."
-  ;;
-  *)
-    echo "Usage: $SCRIPTNAME {start|stop|restart|reload}" >&2
-    exit 3
-  ;;
-esac
+        echo -n "Stopping $DESC: "
+        start-stop-daemon --stop --quiet \
+                --exec $DAEMON -- stop
+        echo "$NAME."
+        ;;
+  restart|force-reload)
+        echo -n "Restarting $DESC: "
+        start-stop-daemon --stop --quiet --exec $DAEMON -- stop
+        sleep 1
+        start-stop-daemon --start --quiet --exec $DAEMON -- start
+        echo "$NAME."
+        ;;
+	  *)
+	        N=/etc/init.d/$NAME
+	        echo "Usage: $N {start|stop|restart}" >&2
+	        exit 1   
+	        ;;
+	esac
 
-exit 0
+	exit 0
