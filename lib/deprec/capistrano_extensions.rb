@@ -274,9 +274,9 @@ module Deprec2
   end
 
   # install package from source
-  def install_from_src(src_package, src_dir)
+  def install_from_src(src_package, src_dir, unpack = true)
     package_dir = File.join(src_dir, src_package[:dir])
-    unpack_src(src_package, src_dir)
+    unpack_src(src_package, src_dir) if unpack
     apt.install( {:base => %w(build-essential)}, :stable )
     # XXX replace with invoke_command
     sudo <<-SUDO
