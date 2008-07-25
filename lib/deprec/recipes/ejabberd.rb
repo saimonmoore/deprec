@@ -72,7 +72,7 @@ Capistrano::Configuration.instance(:must_exist).load do
          :owner => 'root:root'},
          
         {:template => 'ejabberd.cfg.erb',
-         :path => ejabberd_dir,
+         :path => ejabberd_conf,
          :mode => 0755,
          :owner => 'root:root'}         
       ]
