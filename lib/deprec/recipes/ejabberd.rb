@@ -145,6 +145,10 @@ Capistrano::Configuration.instance(:must_exist).load do
         sudo "test -L #{ejabberd_conf_apps_dir}/#{application}.cfg && unlink #{ejabberd_conf_apps_dir}/#{application}.cfg"
       end
       
+      task :symlink_logrotate_config, :roles => :web do
+        sudo "ln -sf #{ejabberd_conf_dir}/logrotate.conf /etc/logrotate.d/ejabberd"
+      end      
+      
       desc "Start ejabberd"
       task :start, :roles => :app do
         sudo "/etc/init.d/ejabberd start"
