@@ -30,37 +30,31 @@ Capistrano::Configuration.instance(:must_exist).load do
       
       desc "Install ejabberd"
       task :install, :roles => :app do        
-        install_deps
+        install_ejabberd_deps
         deprec2.download_src(SRC_PACKAGES[:ejabberd], src_dir)
         deprec2.install_from_src(SRC_PACKAGES[:ejabberd], src_dir)
         create_ejabberd_user
         activate
       end
       
-      # install dependencies for ejabberd
-      task :install_deps do
-        
-        SRC_PACKAGES[:ejabberd] = {
-          :filename => 'ejabberd-2.0.1_2.tar.gz',
-          :url => "http://www.process-one.net/downloads/ejabberd/2.0.1/ejabberd-2.0.1_2.tar.gz",        
-          :md5sum => "9c9417ab8dc334094ec7a611016c726e ejabberd-2.0.1_2.tar.gz",
-          :configure => %w(
-              cd src;
-              ./configure
-              --prefix=/usr/local 
-              ;
-            ).reject{|arg| arg.match '#'}.join(' '),        
-        }
-                
-        apt.install( {:base => %w(flex, libncurses-dev, libsctp-dev, libssl-dev, m4, openssl, perl, quilt, libexpat-dev, zlib, libtext-iconv-perl)}, :stable )
+      desc "Install deps for ejabberd"      
+      task :install_ejabberd_deps do
+        install_erlang_deps
+        apt.install( {:base => %w(flex, libncurses5, libncurses5-dev, libsctp-dev, openssl, libssl-dev, perl, quilt, libexpat1-dev, zlib, libtext-iconv-perl, erlang)}, :stable )
       end
       
+      desc "Install deps for Erlang"
+      task :install_erlang_deps do
+       apt.install( {:base => %w(libc6 libncurses5 libncurses5-dev libssl-dev openssl m4 libexpat1-dev)}, :stable )
+      end
+            
       task :install_erlang_from_src do
-        apt.build_dep( {:base => %w(erlang)}, :stable )        
+        install_erlang_deps
+        # apt.build_dep( {:base => %w(erlang)}, :stable )        
         deprec2.download_src(SRC_PACKAGES[:erlang], src_dir)
         deprec2.install_from_src(SRC_PACKAGES[:erlang], src_dir)        
       end
-
+      
       task :create_ejabberd_user do
         deprec2.groupadd(ejabberd_group)
         deprec2.useradd(ejabberd_user, :group => ejabberd_group, :homedir => false)
@@ -69,9 +63,9 @@ Capistrano::Configuration.instance(:must_exist).load do
       task :symlink_logrotate_config, :roles => :web do
         sudo "ln -sf /etc/ejabberd/logrotate.conf /etc/logrotate.d/ejabberd"
       end
-    
+          
       SYSTEM_CONFIG_FILES[:ejabberd] = [
-    
+          
         {:template => 'ejabberd-init-script',
          :path => '/etc/init.d/ejabberd',
          :mode => 0755,
@@ -84,9 +78,9 @@ Capistrano::Configuration.instance(:must_exist).load do
       ]
       
       PROJECT_CONFIG_FILES[:ejabberd] = [
-
+      
         {:template => "application.cfg.erb",
-         :path => "#{application}.cfg",
+         :path => "application.cfg",
          :mode => 0644,
          :owner => 'root:root'},
          
@@ -96,7 +90,7 @@ Capistrano::Configuration.instance(:must_exist).load do
          :owner => 'root:root'}
       
       ]      
-  
+        
       desc "Generate configuration file(s) for ejabberd from template(s)"
       task :config_gen do
         config_gen_system
@@ -134,7 +128,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       
       task :symlink_application_config, :roles => :app do
         deprec2.mkdir(ejabberd_conf_dir, :via => :sudo)
-        sudo "ln -sf #{deploy_to}/ejabberd/#{application}.cfg #{ejabberd_conf_dir}/#{application}.cfg"
+        sudo "ln -sf #{deploy_to}/ejabberd/application.cfg #{ejabberd_conf_dir}/#{application}.cfg"
       end
       
       task :unlink_application_config, :roles => :app do
@@ -145,22 +139,22 @@ Capistrano::Configuration.instance(:must_exist).load do
       task :start, :roles => :app do
         sudo "/etc/init.d/ejabberd start"
       end
-
+      
       desc "Stop ejabberd"
       task :stop, :roles => :app  do
         sudo "/etc/init.d/ejabberd stop"
       end
-
+      
       desc "Restart ejabberd"
       task :restart, :roles => :app  do
         send "/etc/init.d/ejabberd restart"
       end
-
+      
       desc "Reload ejabberd"
       task :reload, :roles => :app  do
         sudo "/etc/init.d/ejabberd reload"
       end
-   
+         
       desc <<-DESC
         Activate ejabberd start scripts on server.
         Setup server to start ejabberd on boot.
@@ -168,7 +162,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       task :activate do
         sudo "update-rc.d ejabberd defaults"
       end
-  
+        
       desc <<-DESC
         Dectivate ejabberd start scripts on server.
         Setup server to start ejabberd on boot.

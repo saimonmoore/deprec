@@ -56,7 +56,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       menu.header = "select database server type"
     end
   end
-
+  
   default(:application) do
     Capistrano::CLI.ui.ask "enter name of project(no spaces)" do |q|
       q.validate = /^[0-9a-z_]*$/
