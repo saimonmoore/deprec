@@ -139,9 +139,33 @@ Capistrano::Configuration.instance(:must_exist).load do
         sudo "test -L #{ejabberd_conf_apps_dir}/#{application}.cfg && unlink #{ejabberd_conf_apps_dir}/#{application}.cfg"
       end
       
-      task :symlink_logrotate_config, :roles => :web do
+      task :symlink_logrotate_config, :roles => :app do
         sudo "ln -sf #{ejabberd_conf_dir}/logrotate.conf /etc/logrotate.d/ejabberd"
-      end      
+      end
+      
+      desc "Register an admin user with ejabberd to access web interface"
+      task :register_admin_user, :roles => :app do
+        target_user = Capistrano::CLI.ui.ask "Enter userid for admin user" do |q|
+          q.default = user
+        end
+        
+        target_domain = Capistrano::CLI.ui.ask "Enter jabber domain for admin user" do |q|
+          q.default = "jabber.#{domain}"
+        end
+        
+        admin_password = Capistrano::CLI.ui.ask("Enter password for #{target_user}") { |q| q.echo = false }
+                
+        sudo "ejabberdctl register #{target_user} #{target_domain} #{admin_password}"
+        
+        puts "Don't forget to update ejabberd.cfg with:"
+        puts
+        puts <<-TXT
+        {acl, admins, {user, "#{target_user}", "#{target_domain}"}}.
+          {access, configure, [{allow, admins}]}.
+        
+        TXT
+      end
+      
       
       desc "Start ejabberd"
       task :start, :roles => :app do
