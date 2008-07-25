@@ -3,12 +3,11 @@ Capistrano::Configuration.instance(:must_exist).load do
   namespace :deprec do 
     namespace :ejabberd do
         
-      set :ejabberd_user, 'ejabberd'
-      set :ejabberd_group, 'ejabberd'
       set :ejabberd_conf_dir, '/usr/local/etc/ejabberd'
       set :ejabberd_conf_apps_dir, '/usr/local/etc/ejabberd/conf'
       set :ejabberd_log_dir, '/usr/local/var/log/ejabberd'
       set :ejabberd_executable, '/usr/local/sbin/ejabberdctl'
+      set :ejabberd_init_script, '/etc/init.d/ejabberd'
       set :ejabberd_lib_dir, '/usr/local/var/lib/ejabberd'
       set :ejabberd_conf , "#{ejabberd_conf_dir}/ejabberd.cfg" 
   
@@ -38,7 +37,6 @@ Capistrano::Configuration.instance(:must_exist).load do
         install_ejabberd_deps
         deprec2.download_src(SRC_PACKAGES[:ejabberd], src_dir)
         deprec2.install_from_src(SRC_PACKAGES[:ejabberd], src_dir)
-        create_ejabberd_user
         activate
       end
       
@@ -66,25 +64,21 @@ Capistrano::Configuration.instance(:must_exist).load do
         rm -rf #{ejabberd_log_dir}
         rm -rf #{ejabberd_executable}
         rm -rf #{ejabberd_lib_dir}
+        rm -rf #{ejabberd_init_script}
         CMD
       end
-      
-      task :create_ejabberd_user do
-        deprec2.groupadd(ejabberd_group)
-        deprec2.useradd(ejabberd_user, :group => ejabberd_group, :homedir => false)
-      end
-                
+                      
       SYSTEM_CONFIG_FILES[:ejabberd] = [
           
         {:template => 'ejabberd-init-script',
          :path => '/etc/init.d/ejabberd',
          :mode => 0755,
-         :owner => "#{ejabberd_user}:#{ejabberd_group}"},
+         :owner => "root:root"},
          
         {:template => 'ejabberd.cfg.erb',
          :path => ejabberd_conf,
          :mode => 0755,
-         :owner => "#{ejabberd_user}:#{ejabberd_group}"},
+         :owner => "root:root"},
          
          {:template => 'logrotate.conf.erb',
           :path => "#{ejabberd_conf_dir}/logrotate.conf", 
@@ -97,7 +91,7 @@ Capistrano::Configuration.instance(:must_exist).load do
         {:template => "application.cfg.erb",
          :path => "application.cfg",
          :mode => 0644,
-         :owner => "#{ejabberd_user}:#{ejabberd_group}"}
+         :owner => "root:root"}
       
       ]      
         
