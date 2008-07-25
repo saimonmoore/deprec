@@ -52,6 +52,17 @@ Capistrano::Configuration.instance(:must_exist).load do
         puts 'deprecated! use deprec:users:add'
         add
       end
+      
+      desc "Make super user"
+      task :make_super_user do
+        target_user = Capistrano::CLI.ui.ask "Enter userid for super user" do |q|
+          q.default = user
+        end 
+        
+        deprec2.groupadd('admin')
+        deprec2.add_user_to_group(target_user, 'sudo')
+        deprec2.append_to_file_if_missing('/etc/sudoers', '%sudo ALL=(ALL) ALL')
+      end      
   
       desc "Change user password"
       task :passwd do
