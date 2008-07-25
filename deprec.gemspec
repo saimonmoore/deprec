@@ -25,5 +25,4 @@ SPEC = Gem::Specification.new do |s|
   s.default_executable = "depify"
   s.executables = ["depify"]
   s.has_rdoc = true
-  
 end
