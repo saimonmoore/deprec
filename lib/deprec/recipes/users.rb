@@ -59,7 +59,7 @@ Capistrano::Configuration.instance(:must_exist).load do
           q.default = user
         end 
         
-        deprec2.groupadd('admin')
+        deprec2.groupadd('sudo')
         deprec2.add_user_to_group(target_user, 'sudo')
         deprec2.append_to_file_if_missing('/etc/sudoers', '%sudo ALL=(ALL) ALL')
       end      
