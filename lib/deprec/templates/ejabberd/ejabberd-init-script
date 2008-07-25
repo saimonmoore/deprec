@@ -10,9 +10,9 @@
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 DESC="erlang xmpp messaging server"
 NAME=ejabberd
-DAEMON=ejabberdctl
-CONFIGFILEDIR=/etc/ejabberd
-LOGFILE=/var/log/ejabberd/$NAME.log
+DAEMON=/usr/local/sbin/ejabberdctl
+CONFIGFILEDIR=/usr/local/etc/ejabberd
+LOGFILE=/usr/local/var/log/ejabberd/$NAME.log
 SCRIPTNAME=/etc/init.d/$NAME
 
 # Check if DAEMON binary exist

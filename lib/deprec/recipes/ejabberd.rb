@@ -3,15 +3,20 @@ Capistrano::Configuration.instance(:must_exist).load do
   namespace :deprec do 
     namespace :ejabberd do
         
-      set :ejabberd_dir, '/etc/ejabberd'
-      set :ejabberd_conf_dir, '/etc/ejabberd/conf'
-      set :ejabberd_log_dir, '/var/log/ejabberd'
-      set :ejabberd_conf , "#{ejabberd_dir}/ejabberd.cfg" 
+      set :ejabberd_user, 'ejabberd'
+      set :ejabberd_group, 'ejabberd'
+      set :ejabberd_conf_dir, '/usr/local/etc/ejabberd'
+      set :ejabberd_conf_apps_dir, '/usr/local/etc/ejabberd/conf'
+      set :ejabberd_log_dir, '/usr/local/var/log/ejabberd'
+      set :ejabberd_executable, '/usr/local/sbin/ejabberdctl'
+      set :ejabberd_lib_dir, '/usr/local/var/lib/ejabberd'
+      set :ejabberd_conf , "#{ejabberd_conf_dir}/ejabberd.cfg" 
   
       # Install 
       
       SRC_PACKAGES[:ejabberd] = {
         :filename => 'ejabberd-2.0.1_2.tar.gz',
+        :dir => 'ejabberd-2.0.1',
         :url => "http://www.process-one.net/downloads/ejabberd/2.0.1/ejabberd-2.0.1_2.tar.gz",        
         :md5sum => "9c9417ab8dc334094ec7a611016c726e ejabberd-2.0.1_2.tar.gz",
         :configure => %w(
@@ -39,13 +44,12 @@ Capistrano::Configuration.instance(:must_exist).load do
       
       desc "Install deps for ejabberd"      
       task :install_ejabberd_deps do
-        install_erlang_deps
-        apt.install( {:base => %w(flex, libncurses5, libncurses5-dev, libsctp-dev, openssl, libssl-dev, perl, quilt, libexpat1-dev, zlib, libtext-iconv-perl, erlang)}, :stable )
+        apt.install( {:base => %w(openssl libssl-dev libexpat1-dev zlib1g-dev libtext-iconv-perl erlang)}, :stable )
       end
       
       desc "Install deps for Erlang"
       task :install_erlang_deps do
-       apt.install( {:base => %w(libc6 libncurses5 libncurses5-dev libssl-dev openssl m4 libexpat1-dev)}, :stable )
+       apt.install( {:base => %w(libncurses-dev libssl-dev m4 tk tcl gcj)}, :stable )
       end
             
       task :install_erlang_from_src do
@@ -55,13 +59,23 @@ Capistrano::Configuration.instance(:must_exist).load do
         deprec2.install_from_src(SRC_PACKAGES[:erlang], src_dir)        
       end
       
+      task :uninstall_ejabberd do
+        sudo <<-CMD
+        rm -rf #{ejabberd_conf_dir}
+        rm -rf #{ejabberd_conf_apps_dir}
+        rm -rf #{ejabberd_log_dir}
+        rm -rf #{ejabberd_executable}
+        rm -rf #{ejabberd_lib_dir}
+        CMD
+      end
+      
       task :create_ejabberd_user do
         deprec2.groupadd(ejabberd_group)
         deprec2.useradd(ejabberd_user, :group => ejabberd_group, :homedir => false)
       end
       
       task :symlink_logrotate_config, :roles => :web do
-        sudo "ln -sf /etc/ejabberd/logrotate.conf /etc/logrotate.d/ejabberd"
+        sudo "ln -sf /usr/local/etc/ejabberd/logrotate.conf /etc/logrotate.d/ejabberd"
       end
           
       SYSTEM_CONFIG_FILES[:ejabberd] = [
@@ -69,12 +83,12 @@ Capistrano::Configuration.instance(:must_exist).load do
         {:template => 'ejabberd-init-script',
          :path => '/etc/init.d/ejabberd',
          :mode => 0755,
-         :owner => 'root:root'},
+         :owner => "#{ejabberd_user}:#{ejabberd_group}"},
          
         {:template => 'ejabberd.cfg.erb',
          :path => ejabberd_conf,
          :mode => 0755,
-         :owner => 'root:root'}         
+         :owner => "#{ejabberd_user}:#{ejabberd_group}"}   
       ]
       
       PROJECT_CONFIG_FILES[:ejabberd] = [
@@ -82,7 +96,7 @@ Capistrano::Configuration.instance(:must_exist).load do
         {:template => "application.cfg.erb",
          :path => "application.cfg",
          :mode => 0644,
-         :owner => 'root:root'},
+         :owner => "#{ejabberd_user}:#{ejabberd_group}"},
          
         {:template => 'logrotate.conf.erb',
          :path => "logrotate.conf", 
@@ -127,12 +141,12 @@ Capistrano::Configuration.instance(:must_exist).load do
       end
       
       task :symlink_application_config, :roles => :app do
-        deprec2.mkdir(ejabberd_conf_dir, :via => :sudo)
-        sudo "ln -sf #{deploy_to}/ejabberd/application.cfg #{ejabberd_conf_dir}/#{application}.cfg"
+        deprec2.mkdir(ejabberd_conf_apps_dir, :via => :sudo)
+        sudo "ln -sf #{deploy_to}/ejabberd/application.cfg #{ejabberd_conf_apps_dir}/#{application}.cfg"
       end
       
       task :unlink_application_config, :roles => :app do
-        sudo "test -L #{ejabberd_conf_dir}/#{application}.cfg && unlink #{ejabberd_conf_dir}/#{application}.cfg"
+        sudo "test -L #{ejabberd_conf_apps_dir}/#{application}.cfg && unlink #{ejabberd_conf_apps_dir}/#{application}.cfg"
       end
       
       desc "Start ejabberd"
