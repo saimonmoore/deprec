@@ -59,7 +59,7 @@ Capistrano::Configuration.instance(:must_exist).load do
         deprec2.install_from_src(SRC_PACKAGES[:erlang], src_dir)        
       end
       
-      task :uninstall_ejabberd do
+      task :uninstall do
         sudo <<-CMD
         rm -rf #{ejabberd_conf_dir}
         rm -rf #{ejabberd_conf_apps_dir}
