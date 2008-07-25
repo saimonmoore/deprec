@@ -73,11 +73,7 @@ Capistrano::Configuration.instance(:must_exist).load do
         deprec2.groupadd(ejabberd_group)
         deprec2.useradd(ejabberd_user, :group => ejabberd_group, :homedir => false)
       end
-      
-      task :symlink_logrotate_config, :roles => :web do
-        sudo "ln -sf /usr/local/etc/ejabberd/logrotate.conf /etc/logrotate.d/ejabberd"
-      end
-          
+                
       SYSTEM_CONFIG_FILES[:ejabberd] = [
           
         {:template => 'ejabberd-init-script',
@@ -88,7 +84,12 @@ Capistrano::Configuration.instance(:must_exist).load do
         {:template => 'ejabberd.cfg.erb',
          :path => ejabberd_conf,
          :mode => 0755,
-         :owner => "#{ejabberd_user}:#{ejabberd_group}"}   
+         :owner => "#{ejabberd_user}:#{ejabberd_group}"},
+         
+         {:template => 'logrotate.conf.erb',
+          :path => "#{ejabberd_conf_dir}/logrotate.conf", 
+          :mode => 0644,
+          :owner => 'root:root'}            
       ]
       
       PROJECT_CONFIG_FILES[:ejabberd] = [
@@ -96,12 +97,7 @@ Capistrano::Configuration.instance(:must_exist).load do
         {:template => "application.cfg.erb",
          :path => "application.cfg",
          :mode => 0644,
-         :owner => "#{ejabberd_user}:#{ejabberd_group}"},
-         
-        {:template => 'logrotate.conf.erb',
-         :path => "logrotate.conf", 
-         :mode => 0644,
-         :owner => 'root:root'}
+         :owner => "#{ejabberd_user}:#{ejabberd_group}"}
       
       ]      
         
@@ -132,12 +128,12 @@ Capistrano::Configuration.instance(:must_exist).load do
       task :config_system, :roles => :app do
         deprec2.mkdir(ejabberd_log_dir, :via => :sudo)
         deprec2.push_configs(:ejabberd, SYSTEM_CONFIG_FILES[:ejabberd])
+        symlink_logrotate_config        
       end
       
       task :config_project, :roles => :app do
         deprec2.push_configs(:ejabberd, PROJECT_CONFIG_FILES[:ejabberd])
         symlink_application_config
-        symlink_logrotate_config
       end
       
       task :symlink_application_config, :roles => :app do
