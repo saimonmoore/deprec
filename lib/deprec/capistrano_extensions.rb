@@ -297,7 +297,12 @@ module Deprec2
 
     apt.install( {:base => %w(subversion)}, :stable )
     # XXX replace with invoke_command
-    sudo "cd #{src_dir} && svn export -q #{src_package[:url] ? "-r #{src_package[:revision]}": ""} #{src_package[:url]} #{src_package[:dir]}"
+    sudo <<-CMD
+    sh -c '
+    cd #{src_dir};
+    svn export -q #{src_package[:url] ? "-r #{src_package[:revision]}": ""} #{src_package[:url]} #{src_package[:dir]}
+    '
+    CMD
   end
 
   ##
