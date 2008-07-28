@@ -34,6 +34,8 @@ module Deprec2
     remote = options[:remote] || false
     mode = options[:mode] || 0755
     owner = options[:owner] || nil
+    local_only = options[:local_only] || false
+    destination_root = options[:destination_root] || 'config'
   
     # replace this with a check for the file
     if ! template
@@ -64,7 +66,7 @@ module Deprec2
       sudo "chown #{owner} #{path}" if defined?(owner)
     elsif path 
       # render to local file
-      full_path = File.join('config', app.to_s, path)
+      full_path = File.join(destination_root, app.to_s, path)
       path_dir = File.dirname(full_path)
       if File.exists?(full_path)
         if IO.read(full_path) == rendered_template
@@ -81,6 +83,7 @@ module Deprec2
       # added line above to make windows compatible
       # system "mkdir -p #{path_dir}" if ! File.directory?(path_dir) 
       File.open(full_path, 'w'){|f| f.write rendered_template }
+      File.chmod(mode, full_path) if local_only
       puts "[done] #{full_path} written"
     else
       # render to string

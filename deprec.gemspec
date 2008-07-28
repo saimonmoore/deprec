@@ -1,7 +1,7 @@
 require 'rubygems' 
 
 SPEC = Gem::Specification.new do |s|
-  s.name = 'deprec'
+  s.name = 'saimonmoore-deprec'
   s.version = '1.99.24'
   
   s.authors = ['Mike Bailey']
