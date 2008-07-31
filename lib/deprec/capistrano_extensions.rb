@@ -213,9 +213,11 @@ module Deprec2
   end
 
   # add group to the list of groups this user belongs to
-  def add_user_to_group(user, group)
+  def add_user_to_group(user, group, primary = false)
     invoke_command "groups #{user} | grep ' #{group} ' || sudo /usr/sbin/usermod -G #{group} -a #{user}",
     :via => run_method
+    invoke_command "groups #{user} | grep ' #{group} ' || sudo /usr/sbin/usermod -g #{group} #{user}",
+    :via => run_method if primary
   end
 
   # create directory if it doesn't already exist

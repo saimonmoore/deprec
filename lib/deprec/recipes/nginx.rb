@@ -24,9 +24,6 @@ Capistrano::Configuration.instance(:must_exist).load do
         deprec2.install_from_src(SRC_PACKAGES[:nginx], src_dir)
         create_nginx_user
         # install_index_page  # XXX not done yet
-        SYSTEM_CONFIG_FILES[:nginx].each do |file|
-          deprec2.render_template(:nginx, file.merge(:remote => true))
-        end
         activate
       end
 
