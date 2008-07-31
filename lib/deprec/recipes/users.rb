@@ -59,9 +59,19 @@ Capistrano::Configuration.instance(:must_exist).load do
           q.default = user
         end 
         
+        ask_for_password = Capistrano::CLI.ui.ask "Should sudo ask for password?" do |q|
+          q.default = 'yes'
+        end        
+        
         deprec2.groupadd('sudo')
         deprec2.add_user_to_group(target_user, 'sudo')
-        deprec2.append_to_file_if_missing('/etc/sudoers', '%sudo ALL=(ALL) ALL')
+        
+        if ask_for_password.grep(/y/i)        
+          deprec2.append_to_file_if_missing('/etc/sudoers', '%sudo ALL=(ALL) ALL')          
+        else
+          deprec2.append_to_file_if_missing('/etc/sudoers', '%sudo ALL=NOPASSWD: ALL')
+        end
+
       end      
   
       desc "Change user password"

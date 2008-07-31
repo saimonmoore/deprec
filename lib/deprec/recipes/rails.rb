@@ -106,7 +106,7 @@ Capistrano::Configuration.instance(:must_exist).load do
         {:template => 'logrotate.conf.erb',
          :path => "logrotate.conf", 
          :mode => 0644,
-         :owner => 'root:root'}  
+         :owner => 'root:root'}
       ]
       
       desc "Generate config files for rails app."

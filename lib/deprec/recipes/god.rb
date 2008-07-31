@@ -138,6 +138,10 @@ Capistrano::Configuration.instance(:must_exist).load do
         sudo "test -L #{god_conf_dir}/thin_#{application}.god && unlink #{god_conf_dir}/thin_#{application}.god"
       end
       
+      task :symlink_logrotate_config, :roles => :web do
+        sudo "ln -sf #{deploy_to}/god/logrotate.conf /etc/logrotate.d/god-#{application}"
+      end      
+      
       desc "Start god"
       task :start, :roles => :app do
         sudo "/etc/init.d/god start"
