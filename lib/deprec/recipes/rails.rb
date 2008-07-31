@@ -203,9 +203,9 @@ Capistrano::Configuration.instance(:must_exist).load do
       #
       # if (self.respond_to?("db_host_#{rails_env}".to_sym)) # doesn't seem to work
 
-      set :db_host_default, lambda { Capistrano::CLI.ui.ask('Enter database host') {|q| q.default = 'localhost'} }
-      set :db_host_staging, lambda { db_host_default }
-      set :db_host_production, lambda { db_host_default }
+      set :db_adaptor_default, lambda { Capistrano::CLI.ui.ask('Enter database adaptor') {|q| q.default = 'mysql'} }
+      set :db_adaptor_staging, lambda { db_adaptor_default }
+      set :db_adaptor_production, lambda { db_adaptor_default }
 
       set :db_name_default, lambda { Capistrano::CLI.ui.ask('Enter database name') {|q| q.default = "#{application}_#{rails_env}"} }
       set :db_name_staging, lambda { db_name_default }
@@ -219,26 +219,39 @@ Capistrano::Configuration.instance(:must_exist).load do
       set :db_pass_staging, lambda { db_pass_default }
       set :db_pass_production, lambda { db_pass_default }
 
-      set :db_adaptor_default, lambda { Capistrano::CLI.ui.ask('Enter database adaptor') {|q| q.default = 'mysql'} }
-      set :db_adaptor_staging, lambda { db_adaptor_default }
-      set :db_adaptor_production, lambda { db_adaptor_default }
-
+      set :db_encoding_default, lambda { Capistrano::CLI.ui.ask('Enter database encoding') {|q| q.default = 'utf8'} }
+      set :db_encoding_staging, lambda { db_encoding_default }
+      set :db_encoding_production, lambda { db_encoding_default }
+      
+      set :db_host_default, lambda { Capistrano::CLI.ui.ask('Enter database host') {|q| q.default = ''} }
+      set :db_host_staging, lambda { db_host_default }
+      set :db_host_production, lambda { db_host_default }      
+      
       set :db_socket_default, lambda { Capistrano::CLI.ui.ask('Enter database socket') {|q| q.default = ''} }
       set :db_socket_staging, lambda { db_socket_default }
       set :db_socket_production, lambda { db_socket_default }
 
-      task :generate_database_yml, :roles => :app do    
+      task :generate_database_yml, :roles => :app do
+        adaptor = self.send("db_adaptor_#{rails_env}")
+        name = self.send("db_name_#{rails_env}")
+        user = self.send("db_user_#{rails_env}")
+        pass = self.send("db_pass_#{rails_env}")
+        encoding = self.send("db_encoding_#{rails_env}")
+        host = self.send("db_host_#{rails_env}")
+        socket = self.send("db_socket_#{rails_env}")
+        
         database_configuration = <<-EOF
-        #{rails_env}:
-        adapter: #{self.send("db_adaptor_#{rails_env}")}
-        database: #{self.send("db_name_#{rails_env}")}
-        username: #{self.send("db_user_#{rails_env}")}
-        password: #{self.send("db_pass_#{rails_env}")}
-        host: #{self.send("db_host_#{rails_env}")}
-        socket: #{self.send("db_socket_#{rails_env}")}
+#{rails_env}:
+  adapter: #{adaptor}
+  database: #{name}
+  username: #{user}
+  password: #{pass}
+  encoding: #{encoding}
+  #{(host && !host.empty?) ? ("host: " + host) : '# host: '}
+  #{(socket && !socket.empty?) ? ("socket: " + socket) : '# socket: '}
         EOF
         run "mkdir -p #{deploy_to}/#{shared_dir}/config" 
-        put database_configuration, "#{deploy_to}/#{shared_dir}/config/database.yml" 
+        put database_configuration, "#{deploy_to}/#{shared_dir}/config/database.yml"
       end
 
       desc "Link in the production database.yml" 
