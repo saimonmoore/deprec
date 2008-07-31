@@ -203,32 +203,32 @@ Capistrano::Configuration.instance(:must_exist).load do
       #
       # if (self.respond_to?("db_host_#{rails_env}".to_sym)) # doesn't seem to work
 
-      set :db_host_default, lambda { Capistrano::CLI.prompt 'Enter database host', 'localhost'}
+      set :db_host_default, lambda { Capistrano::CLI.ui.ask('Enter database host') {|q| q.default = 'localhost'} }
       set :db_host_staging, lambda { db_host_default }
       set :db_host_production, lambda { db_host_default }
 
-      set :db_name_default, lambda { Capistrano::CLI.prompt 'Enter database name', "#{application}_#{rails_env}" }
+      set :db_name_default, lambda { Capistrano::CLI.ui.ask('Enter database name') {|q| q.default = "#{application}_#{rails_env}"} }
       set :db_name_staging, lambda { db_name_default }
       set :db_name_production, lambda { db_name_default }
 
-      set :db_user_default, lambda { Capistrano::CLI.prompt 'Enter database user', 'root' }
+      set :db_user_default, lambda { Capistrano::CLI.ui.ask('Enter database user') {|q| q.default = 'root'} }
       set :db_user_staging, lambda { db_user_default }
       set :db_user_production, lambda { db_user_default }
 
-      set :db_pass_default, lambda { Capistrano::CLI.prompt 'Enter database pass', '' }
+      set :db_pass_default, lambda { Capistrano::CLI.ui.ask('Enter database pass') {|q| q.echo = false} }
       set :db_pass_staging, lambda { db_pass_default }
       set :db_pass_production, lambda { db_pass_default }
 
-      set :db_adaptor_default, lambda { Capistrano::CLI.prompt 'Enter database adaptor', 'mysql' }
+      set :db_adaptor_default, lambda { Capistrano::CLI.ui.ask('Enter database adaptor') {|q| q.default = 'mysql'} }
       set :db_adaptor_staging, lambda { db_adaptor_default }
       set :db_adaptor_production, lambda { db_adaptor_default }
 
-      set :db_socket_default, lambda { Capistrano::CLI.prompt('Enter database socket', '')}
+      set :db_socket_default, lambda { Capistrano::CLI.ui.ask('Enter database socket') {|q| q.default = ''} }
       set :db_socket_staging, lambda { db_socket_default }
       set :db_socket_production, lambda { db_socket_default }
 
       task :generate_database_yml, :roles => :app do    
-        database_configuration = render :template => <<-EOF
+        database_configuration = <<-EOF
         #{rails_env}:
         adapter: #{self.send("db_adaptor_#{rails_env}")}
         database: #{self.send("db_name_#{rails_env}")}
@@ -243,7 +243,7 @@ Capistrano::Configuration.instance(:must_exist).load do
 
       desc "Link in the production database.yml" 
       task :symlink_database_yml, :roles => :app do
-        run "ln -nfs #{shared_path}/config/database.yml #{release_path}/config/database.yml" 
+        run "ln -nfs #{deploy_to}/#{shared_dir}/config/database.yml #{current_path}/config/database.yml" 
       end
 
 
