@@ -1,37 +1,6 @@
 Capistrano::Configuration.instance(:must_exist).load do 
   namespace :ssmtp do
-  
-    # root=<%= "#{ssmtp_email}" %>
-    # mailhub=<%= ssmtp_mailhub %>
-    # AuthUser=<%= ssmtp_user %>
-    # AuthPass=<%= ssmtp_password %>
-    # rewriteDomain=<%= ssmtp_domain %>
-    # UseSTARTTLS=<%= ssmtp_tls %>    
-  
-    ssmtp_email = Capistrano::CLI.ui.ask "ssmtp email?" do |q|
-      q.default = "#{user}@#{domain}"
-    end
-  
-    ssmtp_mailhub = Capistrano::CLI.ui.ask "ssmtp mail hub (smtp.#{domain})?" do |q|
-      q.default = "smtp.#{domain}"
-    end
-  
-    ssmtp_user = Capistrano::CLI.ui.ask "ssmtp user?" do |q|
-      q.default = user
-    end    
-  
-    ssmtp_password = Capistrano::CLI.ui.ask "ssmtp password?" do |q|
-      q.echo = false
-    end
-  
-    ssmtp_domain = Capistrano::CLI.ui.ask "ssmtp domain?" do |q|
-      q.default = domain
-    end
-  
-    ssmtp_tls = Capistrano::CLI.ui.ask "ssmtp tls?" do |q|
-      q.default = "NO"
-    end
-  
+    
     SYSTEM_CONFIG_FILES[:ssmtp] = [
 
       {:template => 'ssmtp.conf.erb',
@@ -42,6 +11,32 @@ Capistrano::Configuration.instance(:must_exist).load do
   
     desc "Generate configuration file for ssmtp from template"
     task :config_gen do
+      
+      ssmtp_email = Capistrano::CLI.ui.ask "ssmtp email?" do |q|
+        q.default = "#{user}@#{domain}"
+      end
+
+      ssmtp_mailhub = Capistrano::CLI.ui.ask "ssmtp mail hub (smtp.#{domain})?" do |q|
+        q.default = "smtp.#{domain}"
+      end
+
+      ssmtp_user = Capistrano::CLI.ui.ask "ssmtp user?" do |q|
+        q.default = user
+      end    
+
+      ssmtp_password = Capistrano::CLI.ui.ask "ssmtp password?" do |q|
+        q.echo = false
+      end
+
+      ssmtp_domain = Capistrano::CLI.ui.ask "ssmtp domain?" do |q|
+        q.default = domain
+      end
+
+      ssmtp_tls = Capistrano::CLI.ui.ask "ssmtp tls?" do |q|
+        q.default = "NO"
+      end
+
+      
       SYSTEM_CONFIG_FILES[:ssmtp].each do |file|
         deprec2.render_template(:ssmtp, file)
       end  
