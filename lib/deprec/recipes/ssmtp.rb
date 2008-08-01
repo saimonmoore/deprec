@@ -41,7 +41,8 @@ Capistrano::Configuration.instance(:must_exist).load do
         deprec2.render_template(:ssmtp, file)
       end  
     end
-  
+
+    desc "Push ssmtp config to servers"  
     task :config, :roles => :app do
       deprec2.mkdir('/etc/ssmtp', :via => :sudo)        
       deprec2.push_configs(:ssmtp, SYSTEM_CONFIG_FILES[:ssmtp])
