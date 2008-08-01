@@ -28,7 +28,7 @@ Capistrano::Configuration.instance(:must_exist).load do
          :owner => 'root:root'},
          
         {:template => 'god.conf.erb',
-         :path => '/etc/god',
+         :path => '/etc/god.conf',
          :mode => 0755,
          :owner => 'root:root'}         
       ]
