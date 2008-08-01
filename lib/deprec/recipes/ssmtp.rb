@@ -13,30 +13,12 @@ Capistrano::Configuration.instance(:must_exist).load do
       desc "Generate configuration file for ssmtp from template"
       task :config_gen do
       
-        ssmtp_email = Capistrano::CLI.ui.ask "ssmtp email?" do |q|
-          q.default = "#{user}@#{domain}"
-        end
-
-        ssmtp_mailhub = Capistrano::CLI.ui.ask "ssmtp mail hub (smtp.#{domain})?" do |q|
-          q.default = "smtp.#{domain}"
-        end
-
-        ssmtp_user = Capistrano::CLI.ui.ask "ssmtp user?" do |q|
-          q.default = user
-        end    
-
-        ssmtp_password = Capistrano::CLI.ui.ask "ssmtp password?" do |q|
-          q.echo = false
-        end
-
-        ssmtp_domain = Capistrano::CLI.ui.ask "ssmtp domain?" do |q|
-          q.default = domain
-        end
-
-        ssmtp_tls = Capistrano::CLI.ui.ask "ssmtp tls?" do |q|
-          q.default = "NO"
-        end
-
+        set :ssmtp_email, Capistrano::CLI.ui.ask "ssmtp email?" {|q| q.default = "#{user}@#{domain}"}
+        set :ssmtp_mailhub, Capistrano::CLI.ui.ask "ssmtp mail hub (smtp.#{domain})?" {|q| q.default = "smtp.#{domain}"}
+        set :ssmtp_user, Capistrano::CLI.ui.ask "ssmtp user?" {|q| q.default = user}
+        set :ssmtp_password, Capistrano::CLI.ui.ask "ssmtp password?" {|q| q.echo = false}
+        set :ssmtp_domain, Capistrano::CLI.ui.ask "ssmtp domain?" {|q| q.default = domain}
+        set :ssmtp_tls, Capistrano::CLI.ui.ask "ssmtp tls?" {|q| q.default = "NO"}
       
         SYSTEM_CONFIG_FILES[:ssmtp].each do |file|
           deprec2.render_template(:ssmtp, file)
