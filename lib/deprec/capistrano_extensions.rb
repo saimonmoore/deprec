@@ -320,8 +320,8 @@ module Deprec2
   #
   #  run_with_input 'ssh-keygen ...', /^Are you sure you want to overwrite\?/
 
-  def run_with_input(shell_command, input_query=/^Password/, response=nil)
-    handle_command_with_input(:run, shell_command, input_query, response)
+  def run_with_input(shell_command, input_query=/^Password/, response=nil, password_query=nil)
+    handle_command_with_input(:run, shell_command, input_query, response, password_query)
   end
 
   ##
@@ -332,12 +332,12 @@ module Deprec2
   #
   # +input_query+ is a regular expression
 
-  def sudo_with_input(shell_command, input_query=/^Password/, response=nil)
-    handle_command_with_input(:sudo, shell_command, input_query, response)
+  def sudo_with_input(shell_command, input_query=/^Password/, response=nil, password_query=nil)
+    handle_command_with_input(:sudo, shell_command, input_query, response, password_query)
   end
 
-  def invoke_with_input(shell_command, input_query=/^Password/, response=nil)
-    handle_command_with_input(run_method, shell_command, input_query, response)
+  def invoke_with_input(shell_command, input_query=/^Password/, response=nil, password_query=nil)
+    handle_command_with_input(run_method, shell_command, input_query, response, password_query)
   end
 
   ##
@@ -391,17 +391,22 @@ module Deprec2
   # shell_command: The command to run
   # input_query: A regular expression matching a request for input: /^Please enter your password/
 
-  def handle_command_with_input(local_run_method, shell_command, input_query, response=nil)
+  def handle_command_with_input(local_run_method, shell_command, input_query, response=nil, password_query = nil)
+    input = ''    
     send(local_run_method, shell_command) do |channel, stream, data|
+      next if data.chomp == input.chomp || data.chomp == ''      
       logger.info data, channel[:host]
-      if data =~ input_query
+      print data
+      if password_query && (data =~ password_query)
+        password = ::Capistrano::CLI.password_prompt "#{data}"
+        channel.send_data(input = "#{password}\n")
+      elsif data =~ input_query
         if response
           channel.send_data "#{response}\n"
         else 
-          response = ::Capistrano::CLI.password_prompt "#{data}"
-          channel.send_data "#{response}\n"
-        end
-      end
+          channel.send_data(input = $stdin.gets)
+        end                
+      end 
     end
   end
 
