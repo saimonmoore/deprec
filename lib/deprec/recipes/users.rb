@@ -66,7 +66,7 @@ Capistrano::Configuration.instance(:must_exist).load do
         deprec2.groupadd('sudo')
         deprec2.add_user_to_group(target_user, 'sudo')
         
-        if ask_for_password.grep(/y/i)        
+        if ask_for_password =~ /y/i
           deprec2.append_to_file_if_missing('/etc/sudoers', '%sudo ALL=(ALL) ALL')          
         else
           deprec2.append_to_file_if_missing('/etc/sudoers', '%sudo ALL=NOPASSWD: ALL')
