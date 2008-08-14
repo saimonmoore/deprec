@@ -230,6 +230,14 @@ Capistrano::Configuration.instance(:must_exist).load do
       set :db_socket_default, lambda { Capistrano::CLI.ui.ask('Enter database socket') {|q| q.default = ''} }
       set :db_socket_staging, lambda { db_socket_default }
       set :db_socket_production, lambda { db_socket_default }
+      
+      set :db_session_key_default, lambda { Capistrano::CLI.ui.ask('Enter session key') {|q| q.default = ''} }
+      set :db_session_key_staging, lambda { db_session_key_default }
+      set :db_session_key_production, lambda { db_session_key_default }
+      
+      set :db_session_key_secret_default, lambda { Capistrano::CLI.ui.ask('Enter session key secret') {|q| q.default = ''} }
+      set :db_session_key_secret_staging, lambda { db_session_key_secret_default }
+      set :db_session_key_secret_production, lambda { db_session_key_secret_default }      
 
       task :generate_database_yml, :roles => :app do
         adaptor = self.send("db_adaptor_#{rails_env}")
@@ -239,6 +247,8 @@ Capistrano::Configuration.instance(:must_exist).load do
         encoding = self.send("db_encoding_#{rails_env}")
         host = self.send("db_host_#{rails_env}")
         socket = self.send("db_socket_#{rails_env}")
+        session_key = self.send("db_session_key_#{rails_env}")
+        session_key_secret = self.send("db_session_key_secret_#{rails_env}")
         
         database_configuration = <<-EOF
 #{rails_env}:
@@ -249,6 +259,8 @@ Capistrano::Configuration.instance(:must_exist).load do
   encoding: #{encoding}
   #{(host && !host.empty?) ? ("host: " + host) : '# host: '}
   #{(socket && !socket.empty?) ? ("socket: " + socket) : '# socket: '}
+  session_key: #{session_key}  
+  secret: #{session_key_secret}  
         EOF
         run "mkdir -p #{deploy_to}/#{shared_dir}/config" 
         put database_configuration, "#{deploy_to}/#{shared_dir}/config/database.yml"
