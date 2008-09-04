@@ -3,16 +3,6 @@ Capistrano::Configuration.instance(:must_exist).load do
   namespace :deprec do
     namespace :users do
       
-      # desc "Create user account"
-      # task :add do
-      #   target_user = Capistrano::CLI.ui.ask "Enter userid for new user" do |q|
-      #     q.default = user
-      #   end
-      #   deprec2.useradd(target_user, :shell => '/bin/bash')
-      #   puts "Setting password for new account"
-      #   deprec2.invoke_with_input("passwd #{target_user}", /UNIX password/)
-      # end
-      
       desc "Create account"
       task :add do
         target_user = Capistrano::CLI.ui.ask "Enter userid for new user" do |q|
@@ -94,17 +84,6 @@ Capistrano::Configuration.instance(:must_exist).load do
         end
         deprec2.add_user_to_group(target_user, target_group)
       end
-
-      # desc "Create group"
-      # task :add_group do
-      #   target_group = Capistrano::CLI.ui.ask "Enter name for new group" 
-      #   deprec2.groupadd(target_group)
-      # end
-      # 
-      # desc "Add user to group"
-      # task :add_user_to_group do
-      #   # XXX not yet implemented
-      # end
 
     end
   end
