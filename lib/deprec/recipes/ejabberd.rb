@@ -1,4 +1,4 @@
-# Copyright 2006-2008 by Mike Bailey. All rights reserved.
+# Copyright 2008-2009 by Saimon Moore. All rights reserved.
 Capistrano::Configuration.instance(:must_exist).load do 
   namespace :deprec do 
     namespace :ejabberd do
