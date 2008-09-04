@@ -6,6 +6,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       set :ejabberd_conf_dir, '/usr/local/etc/ejabberd'
       set :ejabberd_conf_apps_dir, '/usr/local/etc/ejabberd/conf'
       set :ejabberd_log_dir, '/usr/local/var/log/ejabberd'
+      set :ejabberd_pidfile_dir, '/usr/local/var/run/ejabberd'
       set :ejabberd_executable, '/usr/local/sbin/ejabberdctl'
       set :ejabberd_init_script, '/etc/init.d/ejabberd'
       set :ejabberd_lib_dir, '/usr/local/var/lib/ejabberd'
@@ -62,6 +63,7 @@ Capistrano::Configuration.instance(:must_exist).load do
         rm -rf #{ejabberd_conf_dir}
         rm -rf #{ejabberd_conf_apps_dir}
         rm -rf #{ejabberd_log_dir}
+        rm -rf #{ejabberd_pidfile_dir}
         rm -rf #{ejabberd_executable}
         rm -rf #{ejabberd_lib_dir}
         rm -rf #{ejabberd_init_script}
@@ -121,6 +123,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       
       task :config_system, :roles => :app do
         deprec2.mkdir(ejabberd_log_dir, :via => :sudo)
+        deprec2.mkdir(ejabberd_pidfile_dir, :via => :sudo)
         deprec2.push_configs(:ejabberd, SYSTEM_CONFIG_FILES[:ejabberd])
         symlink_logrotate_config        
       end
