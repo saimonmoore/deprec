@@ -74,12 +74,12 @@ Capistrano::Configuration.instance(:must_exist).load do
           
         {:template => 'ejabberd-init-script',
          :path => '/etc/init.d/ejabberd',
-         :mode => 0755,
+         :mode => 0775,
          :owner => "root:root"},
          
         {:template => 'ejabberd.cfg.erb',
          :path => ejabberd_conf,
-         :mode => 0755,
+         :mode => 0644,
          :owner => "root:root"},
          
          {:template => 'logrotate.conf.erb',
