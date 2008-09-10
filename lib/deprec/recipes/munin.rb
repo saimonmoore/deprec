@@ -10,8 +10,9 @@ Capistrano::Configuration.instance(:must_exist).load do
       
       desc "Post-Munin Tasks"
       task :post_munin do
+        sudo "update-rc.d -f apache2 remove" #We're using nginx, we just need apache2 for htpasswd
         htpass
-        puts "You must link /var/www/html/munin to a web-accessible location."
+        puts "Don't forget to run config_gen and config."
       end
                
       # Install dependencies for munin
