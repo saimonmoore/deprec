@@ -43,13 +43,12 @@ Capistrano::Configuration.instance(:must_exist).load do
         SYSTEM_CONFIG_FILES[:munin].each do |file|
           deprec2.render_template(:munin, file)
         end
-        
-        sudo "/etc/init.d/nginx reload"
       end
       
       desc "Push munin config files to server"
       task :config, :roles => :munin do
         deprec2.push_configs(:munin, SYSTEM_CONFIG_FILES[:munin])
+        sudo "/etc/init.d/nginx reload"        
         restart
       end
       
@@ -98,25 +97,21 @@ Capistrano::Configuration.instance(:must_exist).load do
 
       desc "Start munin"
       task :start, :roles => :munin do
-        send(run_method, "/etc/init.d/munin start")
         send(run_method, "/etc/init.d/munin-node start")
       end
 
       desc "Stop munin"
       task :stop, :roles => :munin do
-        send(run_method, "/etc/init.d/munin stop")
         send(run_method, "/etc/init.d/munin-node stop")
       end
 
       desc "Restart munin"
       task :restart, :roles => :munin do
-        send(run_method, "/etc/init.d/munin restart")
         send(run_method, "/etc/init.d/munin-node restart")
       end
 
       desc "Reload munin"
       task :reload, :roles => :munin do
-        send(run_method, "/etc/init.d/munin reload")
         send(run_method, "/etc/init.d/munin-node reload")
       end
       
