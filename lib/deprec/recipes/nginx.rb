@@ -6,7 +6,9 @@ Capistrano::Configuration.instance(:must_exist).load do
       set :nginx_server_name, nil
       set :nginx_user,  'nginx'
       set :nginx_group, 'nginx'
-      set :nginx_vhost_dir, '/usr/local/nginx/conf/vhosts'
+      set :nginx_conf_dir, '/usr/local/nginx/conf'
+      set :nginx_conf_file, '/usr/local/nginx/conf/nginx.conf'
+      set :nginx_vhost_dir, "#{nginx_conf_dir}/vhosts"
       set :nginx_client_max_body_size, '100M'
       set :nginx_worker_processes, 4
 

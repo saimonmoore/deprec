@@ -1,0 +1,29 @@
+server {
+	listen       80;
+	server_name munin.<%= domain %>;
+	root /var/www/munin;
+	
+	access_log  /usr/local/nginx/logs/munin.access.log  main;
+	error_log   /usr/local/nginx/logs/munin.error.log  debug;
+	client_max_body_size  50M;
+	
+  ## Deny certain User-Agents (case insensitive)
+  if ($http_user_agent ~* (Baiduspider) ) {
+     return 444;
+  }
+
+  ## Deny certain Referers (case insensitive)
+  if ($http_referer ~* (poker|sex|girl) ) {
+     return 444;
+  }
+    
+  # Main config starts here
+
+  # secure
+	location = / {
+
+    # Only for auth base	  
+    auth_basic            "Restricted";
+    auth_basic_user_file  htpasswd;
+	}
+}
