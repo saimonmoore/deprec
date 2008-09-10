@@ -128,7 +128,7 @@ Capistrano::Configuration.instance(:must_exist).load do
         target_user = Capistrano::CLI.ui.ask "Userid" do |q|
           q.default = 'muninadmin'
         end
-        system "htpasswd #{nginx_conf_dir}/htpasswd #{target_user}"
+        deprec2.run_with_input("htpasswd #{nginx_conf_dir}/htpasswd #{target_user}", /password/)
       end
     
     end
