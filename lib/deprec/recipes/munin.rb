@@ -6,6 +6,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       desc "Install munin"
       task :install do
         install_deps
+        post_munin        
       end
       
       desc "Post-Munin Tasks"
