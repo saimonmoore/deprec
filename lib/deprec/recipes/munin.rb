@@ -134,5 +134,6 @@ Capistrano::Configuration.instance(:must_exist).load do
         system "htpasswd #{nginx_conf_dir}/htpasswd #{target_user}"
       end
     
+    end
   end
 end    
