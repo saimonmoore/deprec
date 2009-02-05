@@ -4,36 +4,38 @@ Capistrano::Configuration.instance(:must_exist).load do
     namespace :network do
             
       set(:network_number_of_ports) { 
-        Capistrano::CLI.ui.ask "Number of network ports" do |q|
+        Capistrano::CLI.ui.ask "Number of network interfaces" do |q|
           q.default = 1
         end 
       }
       
+      default_network = ''
       set(:network_interfaces) {
-        foo = {}
-        network_number_of_ports.to_i.times do |port|
-          foo[port] = {}
-          foo[port][:address] = Capistrano::CLI.ui.ask "address" do |q|
-            q.default = "192.168.#{port+1}.10"
+        result = {}
+        network_number_of_ports.to_i.times do |iface|
+          default_network = "192.168.#{iface+1}"
+          result[iface] = {}
+          result[iface][:address] = Capistrano::CLI.ui.ask "address" do |q|
+            q.default = "#{default_network}.10"
           end
-          foo[port][:netmask] = Capistrano::CLI.ui.ask "netmask" do |q|
-            q.default = '255.255.255.0'
+          default_network = result[iface][:address].split('.').slice(0,3).join('.')
+          result[iface][:netmask] = Capistrano::CLI.ui.ask "netmask" do |q|
+            q.default = "255.255.255.0"
           end
-          foo[port][:broadcast] = Capistrano::CLI.ui.ask "broadcast" do |q|
-            q.default = "192.168.#{port+1}.255"
+          result[iface][:broadcast] = Capistrano::CLI.ui.ask "broadcast" do |q|
+            q.default = "#{default_network}.255"
           end
-
         end
-        foo
+        result
       }
       set(:network_hostname) { 
-        Capistrano::CLI.ui.ask "hostname" do |q|
+        Capistrano::CLI.ui.ask "Enter the hostname for the server" do |q|
           # q.validate = /add hostname validation here/
         end 
       } 
       set(:network_gateway) { 
         Capistrano::CLI.ui.ask "default gateway" do |q|
-          q.default = '192.168.1.1'
+          q.default = "#{default_network}.1"
         end 
       }
       set(:network_dns_nameservers) { 
@@ -41,7 +43,12 @@ Capistrano::Configuration.instance(:must_exist).load do
           q.default = '203.8.183.1 4.2.2.1'
         end 
       }
-
+      set(:network_dns_search_path) { 
+        Capistrano::CLI.ui.ask "dns search domains (separated by spaces)" do |q|
+          q.default = nil
+        end 
+      }
+      
       SYSTEM_CONFIG_FILES[:network] = [
 
         {:template => "interfaces.erb",
@@ -56,6 +63,11 @@ Capistrano::Configuration.instance(:must_exist).load do
 
         {:template => "hostname.erb",
          :path => '/etc/hostname',
+         :mode => 0644,
+         :owner => 'root:root'},
+         
+        {:template => "resolv.conf.erb",
+         :path => '/etc/resolv.conf',
          :mode => 0644,
          :owner => 'root:root'}
     

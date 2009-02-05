@@ -1,6 +1,10 @@
 # Copyright 2006-2008 by Mike Bailey. All rights reserved.
 Capistrano::Configuration.instance(:must_exist).load do 
 
+  set :app_user_prefix,  'app_'
+  set(:app_user) { app_user_prefix + application }
+  set :app_group_prefix,  'app_'
+  set(:app_group) { app_group_prefix + application }
   set :database_yml_in_scm, true
   set :app_symlinks, nil
   set :rails_env, 'production'
@@ -11,21 +15,27 @@ Capistrano::Configuration.instance(:must_exist).load do
   # Hook into the default capistrano deploy tasks
   before 'deploy:setup', :except => { :no_release => true } do
     top.deprec.rails.setup_user_perms
+    top.deprec.rails.create_app_user_and_group
     top.deprec.rails.setup_paths
     top.deprec.rails.setup_shared_dirs
     top.deprec.rails.install_gems_for_project
   end
 
   after 'deploy:setup', :except => { :no_release => true } do
-    top.deprec.rails.setup_servers
     top.deprec.rails.create_config_dir
+    top.deprec.rails.config_gen
+    top.deprec.rails.config
+    top.deprec.rails.activate_services
     top.deprec.rails.set_perms_on_shared_and_releases
+    top.deprec.web.reload
+    top.deprec.rails.setup_database
   end
 
   after 'deploy:symlink', :roles => :app do
     top.deprec.rails.symlink_shared_dirs
     top.deprec.rails.symlink_database_yml unless database_yml_in_scm
-    top.deprec.mongrel.set_perms_for_mongrel_dirs
+    top.deprec.rails.make_writable_by_app
+    set_owner_of_environment_rb if web_server_type.to_s == 'passenger'
   end
 
   after :deploy, :roles => :app do
@@ -35,20 +45,31 @@ Capistrano::Configuration.instance(:must_exist).load do
   namespace :deprec do
     namespace :rails do
       
+      task :setup_database, :roles => :db do
+        if ! roles[:db].servers.empty? # Some apps don't use database!
+          deprec2.read_database_yml
+          top.deprec.db.create_user
+          top.deprec.db.create_database
+          top.deprec.db.grant_user_access_to_database
+        end
+      end
+      
       task :install, :roles => :app do
         install_deps
         install_gems
       end
 
       task :install_deps do
-        apt.install( {:base => %w(libmysqlclient15-dev sqlite3 libsqlite3-ruby libsqlite3-dev)}, :stable )
+        apt.install( {:base => %w(libmysqlclient15-dev sqlite3 libsqlite3-ruby libsqlite3-dev libpq-dev)}, :stable )
       end
       
       # install some required ruby gems
       task :install_gems do
         gem2.install 'sqlite3-ruby'
         gem2.install 'mysql'
+        gem2.install 'ruby-pg'
         gem2.install 'rails'
+        gem2.install 'rake'
         gem2.install 'rspec'
       end
       
@@ -56,33 +77,23 @@ Capistrano::Configuration.instance(:must_exist).load do
       Install full rails stack on a stock standard ubuntu server (7.10, 8.04)
       DESC
       task :install_stack do   
-        
-        # Ruby everywhere!
-        top.deprec.ruby.install      
-        top.deprec.rubygems.install
-        
-        deprec2.for_roles('web') do
-          top.deprec.nginx.install        
-        end
-        
-        deprec2.for_roles('app') do
-          top.deprec.svn.install
-          top.deprec.git.install     
-          top.deprec.mongrel.install
-          top.deprec.monit.install
-          top.deprec.rails.install
-        end
-        
-        deprec2.for_roles('web,app') do
-          top.deprec.logrotate.install        
-        end
-        
-        # Install database separately 
-        # deprec2.for_roles('db') do
-        #   top.deprec.mysql.install
-        #   top.deprec.mysql.start      
-        # end
 
+        top.deprec.ruby.install    
+        top.deprec.web.install        # Uses value of web_server_type 
+        top.deprec.svn.install
+        top.deprec.git.install
+        top.deprec.app.install        # Uses value of app_server_type
+        top.deprec.monit.install
+        top.deprec.rails.install
+        top.deprec.logrotate.install  
+        
+        # We not longer install database server as part of this task.
+        # There is too much danger that someone will wreck an existing
+        # shared database.
+        #
+        # Install database server with:
+        #
+        #   cap deprec:db:install
       end
       
       task :install_rails_stack do
@@ -90,68 +101,70 @@ Capistrano::Configuration.instance(:must_exist).load do
         install_stack
       end
       
-      task :install_gems_for_project do
-          if gems_for_project
-            gems_for_project.each { |gem| gem2.install(gem) }
-          end
-      end
-
-      PROJECT_CONFIG_FILES[:nginx] = [
-      
-        {:template => 'rails_nginx_vhost.conf.erb',
-         :path => "rails_nginx_vhost.conf", 
-         :mode => 0644,
-         :owner => 'root:root'},
-           
-        {:template => 'logrotate.conf.erb',
-         :path => "logrotate.conf", 
-         :mode => 0644,
-         :owner => 'root:root'}
-      ]
-      
       desc "Generate config files for rails app."
       task :config_gen do
-        PROJECT_CONFIG_FILES[:nginx].each do |file|
-          deprec2.render_template(:nginx, file)
-        end
-        top.deprec.mongrel.config_gen_project
+        top.deprec.web.config_gen_project
+        top.deprec.app.config_gen_project
       end
 
       desc "Push out config files for rails app."
-      task :config, :roles => [:app, :web] do
-        deprec2.push_configs(:nginx, PROJECT_CONFIG_FILES[:nginx])
-        top.deprec.mongrel.config_project
-        symlink_nginx_vhost
-        symlink_logrotate_config
+      task :config do
+        top.deprec.web.config_project
+        top.deprec.app.config_project
       end
 
-      task :symlink_nginx_vhost, :roles => :web do
-        sudo "ln -sf #{deploy_to}/nginx/rails_nginx_vhost.conf #{nginx_vhost_dir}/#{application}.conf"
-      end
-      
-      task :symlink_logrotate_config, :roles => :web do
-        sudo "ln -sf #{deploy_to}/nginx/logrotate.conf /etc/logrotate.d/nginx-#{application}"
-      end
-
-      task :create_config_dir do
+      task :create_config_dir, :roles => :app do
         deprec2.mkdir("#{shared_path}/config", :group => group, :mode => 0775, :via => :sudo)
       end
       
+      # XXX This should be restricted a bit to limit what app can write to. - Mike
+      desc "set group ownership and permissions on dirs app server needs to write to"
+      task :make_writable_by_app, :roles => :app do
+        tmp_dir = "#{deploy_to}/current/tmp"
+        shared_dir = "#{deploy_to}/shared"
+        # XXX Factor this out
+        files = ["#{mongrel_log_dir}/mongrel.log", "#{mongrel_log_dir}/#{rails_env}.log"]
+
+        sudo "chgrp -R #{app_group} #{tmp_dir} #{shared_dir}"
+        sudo "chmod -R g+w #{tmp_dir} #{shared_dir}" 
+        # set owner and group of log files 
+        files.each { |file|
+          sudo "touch #{file}"
+          sudo "chown #{app_user} #{file}"   
+          sudo "chgrp #{app_group} #{file}" 
+          sudo "chmod g+w #{file}"   
+        } 
+      end
+      
       desc "Create deployment group and add current user to it"
-      task :setup_user_perms do
+      task :setup_user_perms, :roles => [:app, :web] do
         deprec2.groupadd(group)
         deprec2.add_user_to_group(user, group)
-        deprec2.groupadd(mongrel_group)
-        deprec2.add_user_to_group(user, mongrel_group)
+        deprec2.groupadd(app_group)
+        deprec2.add_user_to_group(user, app_group)
         # we've just added ourself to a group - need to teardown connection
         # so that next command uses new session where we belong in group 
         deprec2.teardown_connections
+      end
+      
+      desc "Create user and group for application to run as"
+      task :create_app_user_and_group, :roles => :app do
+        deprec2.groupadd(app_group) 
+        deprec2.useradd(app_user, :group => app_group, :homedir => false)
+        # Set the primary group for the user the application runs as (in case 
+        # user already existed when previous command was run)
+        sudo "usermod --gid #{app_group} #{app_user}"
       end
       
       task :set_perms_on_shared_and_releases, :roles => :app do
         releases = File.join(deploy_to, 'releases')
         sudo "chgrp -R #{group} #{shared_path} #{releases}"
         sudo "chmod -R g+w #{shared_path} #{releases}"
+      end
+      
+      # Passenger runs Rails as the owner of this file.
+      task :set_owner_of_environment_rb, :roles => :app do
+        sudo "chown  #{app_user} #{current_path}/config/environment.rb"
       end
 
       # Setup database server.
@@ -160,7 +173,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       end
 
       # setup extra paths required for deployment
-      task :setup_paths, :roles => :app do
+      task :setup_paths, :roles => [:app, :web] do
         deprec2.mkdir(deploy_to, :mode => 0775, :group => group, :via => :sudo)
         deprec2.mkdir(shared_path, :mode => 0775, :group => group, :via => :sudo)
       end
@@ -189,12 +202,18 @@ Capistrano::Configuration.instance(:must_exist).load do
         end
       end
       
-      # desc "Symlink shared files."
-      # task :symlink_shared_files, :roles => [:app, :web] do
-      #   if shared_files
-      #     shared_files.each { |file| run "ln -nfs #{shared_path}/#{file} #{current_path}/#{file}" }
-      #   end
-      # end
+      task :install_gems_for_project, :roles => :app do
+          if gems_for_project
+            gems_for_project.each { |gem| gem2.install(gem) }
+          end
+      end
+      
+      desc "Activate web, app and monit"
+      task :activate_services do
+        top.deprec.web.activate       
+        top.deprec.app.activate
+        top.deprec.monit.activate
+      end
 
       # database.yml stuff
       #
@@ -270,21 +289,10 @@ Capistrano::Configuration.instance(:must_exist).load do
       task :symlink_database_yml, :roles => :app do
         run "ln -nfs #{deploy_to}/#{shared_dir}/config/database.yml #{current_path}/config/database.yml" 
       end
-
-
       
-      desc "setup and configure servers"
-      task :setup_servers do
-        top.deprec.nginx.activate       
-        top.deprec.mongrel.create_mongrel_user_and_group 
-        top.deprec.mongrel.activate
-        top.deprec.monit.activate
-        top.deprec.rails.config_gen
-        top.deprec.rails.config
-      end
     end
 
-    namespace :db do
+    namespace :database do
       
       desc "Create database"
       task :create, :roles => :db do
@@ -311,3 +319,5 @@ Capistrano::Configuration.instance(:must_exist).load do
   end
   
 end
+
+

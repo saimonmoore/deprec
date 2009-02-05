@@ -1,6 +1,29 @@
 # Copyright 2006-2008 by Mike Bailey. All rights reserved.
 Capistrano::Configuration.instance(:must_exist).load do 
+
+  SRC_PACKAGES[:aoe] = {
+    :url => "http://support.coraid.com/support/linux/aoe6-64.tar.gz",
+    :md5sum => "c5e1ebb734e3b29c0a3d886a700ca44a  aoe6-64.tar.gz",
+    :configure => ''
+  }
   
+  SRC_PACKAGES[:cec] = {
+    :url => "http://easynews.dl.sourceforge.net/sourceforge/aoetools/cec-8.tgz",
+    :md5sum => "7899dc549f9a368e532f9c39ed819f71  cec-8.tgz",
+    :configure => '',
+    :install => "test -f /usr/sbin/cec && rm /usr/sbin/cec; make install;"
+  }
+  
+  SRC_PACKAGES[:ddt] = {
+    :url => "http://support.coraid.com/support/sr/ddt-8.tgz",
+    :md5sum => "256a58aba5e05f9995fb9de6aadadf92  ddt-8.tgz"
+  }
+  
+  SRC_PACKAGES[:aoemask] = {
+    :url => "http://support.coraid.com/support/sr/aoemask-1.tgz",
+    :md5sum => "379461a28d511e269f4593b846bd1288  aoemask-1.tgz"
+  }
+    
   namespace :deprec do
     
     SRC_PACKAGES[:aoe] = {
@@ -14,100 +37,50 @@ Capistrano::Configuration.instance(:must_exist).load do
     }
     
     namespace :aoe do
-
+      
       desc "Install aoe drivers required to mount Coraid block devices"
-      task :install do
+      task :install, :roles => :aoe do
         install_deps
         deprec2.download_src(SRC_PACKAGES[:aoe], src_dir)
         deprec2.install_from_src(SRC_PACKAGES[:aoe], src_dir)
       end
 
-      task :install_deps do
+      task :install_deps, :roles => :aoe do
         apt.install( {:base => %w(build-essential linux-headers-$(uname -r) vblade aoetools)}, :stable )
       end
-
-      SYSTEM_CONFIG_FILES[:aoe] = [
-
-        {:template => "aoetools.erb",
-          :path => '/etc/default/aoetools',
-          :mode => 0644,
-          :owner => 'root:root'}
-
-        ]
-
-      desc "Generate configuration file(s) for XXX from template(s)"
-      task :config_gen do
-        SYSTEM_CONFIG_FILES[:aoe].each do |file|
-          deprec2.render_template(:aoe, file)
-        end
+      
+      desc "Install all AoE related software"
+      task :install_all, :roles => :aoe do
+        top.deprec.aoe.install
+        top.deprec.cec.install
+        top.deprec.ddt.install
+        top.deprec.aoemask.install
       end
-
-      desc 'Deploy configuration files(s) for XXX' 
-      task :config do
-        deprec2.push_configs(:aoe, SYSTEM_CONFIG_FILES[:aoe])
-      end
-
+      
     end
 
-    
-    SRC_PACKAGES[:cec] = {
-      :filename => 'cec-8.tgz',   
-      :md5sum => "7899dc549f9a368e532f9c39ed819f71  cec-8.tgz", 
-      :dir => 'cec-8',  
-      :url => "http://easynews.dl.sourceforge.net/sourceforge/aoetools/cec-8.tgz",
-      :unpack => "tar zxf cec-8.tgz;",
-      :make => 'make;',
-      :install => 'make install;'
-    }
-    
     namespace :cec do
-  
       desc "install CEC (Coraid Ethernet Console)"
-      task :install do
+      task :install, :roles => :aoe do
         deprec2.download_src(SRC_PACKAGES[:cec], src_dir)
         deprec2.install_from_src(SRC_PACKAGES[:cec], src_dir)
       end
-      
     end
     
-    SRC_PACKAGES[:ddt] = {
-      :filename => 'ddt-6.tgz',   
-      :md5sum => "5e1e8a58a8621b93440be605113f7bc0  ddt-6.tgz", 
-      :dir => 'ddt-6',  
-      :url => "http://www.coraid.com/support/sr/ddt-6.tgz",
-      :unpack => "tar zxf ddt-6.tgz;",
-      :make => 'make;',
-      :install => 'make install;'
-    }
-    
     namespace :ddt do
-  
       desc "install DDT (tool for testing performance)"
-      task :install do
+      task :install, :roles => :aoe do
         deprec2.download_src(SRC_PACKAGES[:ddt], src_dir)
         deprec2.install_from_src(SRC_PACKAGES[:ddt], src_dir)
       end
-      
     end
     
-    SRC_PACKAGES[:aoemask] = {
-      :filename => 'aoemask-1.tgz',   
-      :md5sum => "379461a28d511e269f4593b846bd1288  aoemask-1.tgz", 
-      :dir => 'aoemask-1',  
-      :url => "http://www.coraid.com/support/sr/aoemask-1.tgz",
-      :unpack => "tar zxf aoemask-1.tgz;",
-      :make => 'make;',
-      :install => 'make install;'
-    }
-    
     namespace :aoemask do
-  
       desc "install aoemask"
-      task :install do
+      task :install, :roles => :aoe do
         deprec2.download_src(SRC_PACKAGES[:aoemask], src_dir)
         deprec2.install_from_src(SRC_PACKAGES[:aoemask], src_dir)
       end
-      
     end
         
   end

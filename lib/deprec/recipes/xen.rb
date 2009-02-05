@@ -5,59 +5,63 @@ Capistrano::Configuration.instance(:must_exist).load do
       
       # ref: http://www.eadz.co.nz/blog/article/xen-gutsy.html
       
+      desc "Install Xen"
+      task :install, :roles => :dom0 do
+        install_deps
+        disable_apparmour
+        disable_tls
+        enable_hardy_domu
+        initial_config
+      end
+      
+      task :install_deps, :roles => :dom0 do
+        # for amd64 version of ubuntu 7.10
+        apt.install( {:base => %w(linux-image-xen bridge-utils libxen3.1 python-xen-3.1 xen-docs-3.1 xen-hypervisor-3.1 xen-ioemu-3.1 xen-tools xen-utils-3.1 lvm2)}, :stable )
+        # alternatively, for x86 version of ubuntu:
+        # apt-get install ubuntu-xen-server libc6-xen lvm2    
+      end
+      
+      task :disable_apparmour, :roles => :dom0 do
+        sudo '/etc/init.d/apparmor stop'
+        sudo 'update-rc.d -f apparmor remove'
+      end
+      
+      task :disable_tls, :roles => :dom0 do
+        sudo 'mv /lib/tls /lib/tls.disabled'
+      end
+      
       SYSTEM_CONFIG_FILES[:xen] = [
                 
         {:template => "xend-config.sxp.erb",
         :path => '/etc/xen/xend-config.sxp',
         :mode => 0644,
         :owner => 'root:root'},
-        
-        {:template => "xen-tools.conf.erb",
-         :path => '/etc/xen-tools/xen-tools.conf',
-         :mode => 0644,
-         :owner => 'root:root'},
-         
-        {:template => "xm.tmpl.erb",
-         :path => '/etc/xen-tools/xm.tmpl',
-         :mode => 0644,
-         :owner => 'root:root'},
          
         {:template => "xendomains.erb",
          :path => '/etc/default/xendomains',
          :mode => 0755,
          :owner => 'root:root'},
          
-        # This one is a bugfix for gutsy 
-        {:template => "15-disable-hwclock",
-         :path => '/usr/lib/xen-tools/gutsy.d/15-disable-hwclock',
-         :mode => 0755,
-         :owner => 'root:root'},
-         
-        # So is this - xendomains fails to shut down domains on system shutdown
-        {:template => "xend-init.erb",
-         :path => '/etc/init.d/xend',
-         :mode => 0755,
-         :owner => 'root:root'},
-          
         # This gives you a second network bridge on second ethernet device  
         {:template => "network-bridge-wrapper",
          :path => '/etc/xen/scripts/network-bridge-wrapper',
+         :mode => 0755,
+         :owner => 'root:root'},
+         
+        # Bugfix for gutsy - xendomains fails to shut down domains on system shutdown
+        {:template => "xend-init.erb",
+         :path => '/etc/init.d/xend',
          :mode => 0755,
          :owner => 'root:root'}
          
       ]
       
-      desc "Install Xen"
-      task :install, :roles => :dom0 do
-        install_deps
-        # it's all in deps baby
-      end
-      
-      task :install_deps do
-        # for amd64 version of ubuntu 7.10
-        apt.install( {:base => %w(linux-image-xen bridge-utils libxen3.1 python-xen-3.1 xen-docs-3.1 xen-hypervisor-3.1 xen-ioemu-3.1 xen-tools xen-utils-3.1 lvm2)}, :stable )
-        # alternatively, for x86 version of ubuntu:
-        # apt-get install ubuntu-xen-server libc6-xen    
+      desc "Push Xen config files to server"
+      task :initial_config, :roles => :dom0 do
+        # Non-standard! We're pushing these straight out
+        SYSTEM_CONFIG_FILES[:xen].each do |file|
+          deprec2.render_template(:xen, file.merge(:remote => true))
+        end      
       end
       
       desc "Generate configuration file(s) for Xen from template(s)"
@@ -68,7 +72,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       end
       
       desc "Push Xen config files to server"
-      task :config do
+      task :config, :roles => :dom0 do
         deprec2.push_configs(:xen, SYSTEM_CONFIG_FILES[:xen])
       end
       
@@ -79,37 +83,112 @@ Capistrano::Configuration.instance(:must_exist).load do
       # xm create -c /etc/xen/x1.cfg
       
       desc "Start Xen"
-      task :start do
+      task :start, :roles => :dom0 do
         send(run_method, "/etc/init.d/xend start")
       end
 
       desc "Stop Xen"
-      task :stop do
+      task :stop, :roles => :dom0 do
         send(run_method, "/etc/init.d/xend stop")
       end
 
       desc "Restart Xen"
-      task :restart do
+      task :restart, :roles => :dom0 do
         send(run_method, "/etc/init.d/xend restart")
       end
 
       desc "Reload Xen"
-      task :reload do
+      task :reload, :roles => :dom0 do
         send(run_method, "/etc/init.d/xend reload")
       end
       
-      task :list do
+      task :list, :roles => :dom0 do
         sudo "xm list"
       end
       
-      task :info do
+      task :info, :roles => :dom0 do
         sudo "xm info"
       end
       
+      desc "Migrate a slice on one Xen host to another. Slice is stopped, disk is tar'd up and transferred to new host."
+      task :migrate do
+
+        # Get user input for these values
+        xen_old_host && xen_new_host && xen_disk_size && xen_swap_size && xen_slice
+
+        # copy_disk
+        copy_slice_config
+        create_lvm_disks
+        build_slice_from_tarball
+      end
+
+      task :copy_disk do
+        mnt_dir = "/mnt/#{xen_slice}-disk"
+      	tarball = "/tmp/#{xen_slice}-disk.tar"
+      	lvm_disk = "/dev/vm_local/#{xen_slice}-disk"
+
+        # Shutdown slice
+      	sudo "xm list | grep #{xen_slice} && #{sudo} xm shutdown #{xen_slice} && sleep 10; exit 0", :hosts => xen_old_host
+
+      	# Tar up disk partition
+      	sudo "test -d #{mnt_dir} || #{sudo} mkdir #{mnt_dir}; exit 0", :hosts => xen_old_host
+      	sudo "mount | grep #{mnt_dir} || #{sudo} mount -t auto #{lvm_disk} #{mnt_dir}; exit 0", :hosts => xen_old_host
+      	sudo "sh -c 'cd #{mnt_dir} && tar cfp #{tarball} *'", :hosts => xen_old_host
+        sudo "umount #{mnt_dir}", :hosts => xen_old_host
+        sudo "rmdir #{mnt_dir}", :hosts => xen_old_host
+
+      	# start slice again if necessary
+      	# xm create ${SLICE}.cfg
+
+      	# copy to other server
+      	run "scp #{tarball} #{xen_new_host}:/tmp/", :hosts => xen_old_host
+
+      	# clean up tarball
+      	sudo "rm #{tarball}", :hosts => xen_old_host
+      end
+
+      task :copy_slice_config do
+        run "scp /etc/xen/#{xen_slice}.cfg #{xen_new_host}:", :hosts => xen_old_host
+        sudo "test -f /etc/xen/#{xen_slice}.cfg || #{sudo} mv #{xen_slice}.cfg /etc/xen/", :hosts => xen_new_host
+      end
+
+      task :create_lvm_disks do
+        xen_new_host
+        # create lvm disks on new host
+        disks = {"#{xen_slice}-disk" => xen_disk_size, "#{xen_slice}-swap" => xen_swap_size}
+        disks.each { |disk, size|
+          puts "Creating #{disk} (#{size} GB)"
+          sudo "lvcreate -L #{size}G -n #{disk} vm_local", :hosts => xen_new_host
+          sudo "mkfs.ext3 /dev/vm_local/#{disk}", :hosts => xen_new_host
+        }
+      end
+
+      task :build_slice_from_tarball do
+        mnt_dir = "/mnt/#{xen_slice}-disk"
+      	tarball = "/tmp/#{xen_slice}-disk.tar"
+      	lvm_disk = "/dev/vm_local/#{xen_slice}-disk"
+
+      	# untar archive into lvm disk
+      	sudo "test -d #{mnt_dir} || #{sudo} mkdir #{mnt_dir}; exit 0", :hosts => xen_new_host
+      	sudo "mount | grep #{mnt_dir} || #{sudo} mount -t auto #{lvm_disk} #{mnt_dir}; exit 0", :hosts => xen_new_host
+      	sudo "sh -c 'cd #{mnt_dir} && tar xf #{tarball}'", :hosts => xen_new_host
+        sudo "umount #{mnt_dir}", :hosts => xen_new_host
+        sudo "rmdir #{mnt_dir}", :hosts => xen_new_host
+      end
+      
+      desc "Enable hardy heron domU's on gutsy dom0. (Note required on hardy)"
+      task :enable_hardy_domu, :roles => :dom0 do
+        # Note, hardy keeps debootrap in /usr/share/debootstrap/scripts/
+        # create debootstrap symlink
+        sudo "ln -sf /usr/lib/debootstrap/scripts/gutsy /usr/lib/debootstrap/scripts/hardy"
+        # link xen-tools hooks
+        sudo "ln -sf /usr/lib/xen-tools/edgy.d /usr/lib/xen-tools/hardy.d"
+      end
       
       
       
     end
+    
   end
 end
 
@@ -137,19 +216,11 @@ end
       # xend stop
       # ;;
       
-# virtsh
-#
-# enable by putting this into /etc/xen/xend-conf.sxp
-# (xend-unix-server yes)
-
-
-
 #
 # Install xen on ubuntu hardy
 #
 # ref: http://www.howtoforge.com/ubuntu-8.04-server-install-xen-from-ubuntu-repositories
 #
-
 
 # Install Xen packages 
 # apt-get install ubuntu-xen-server

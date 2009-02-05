@@ -26,11 +26,30 @@ Capistrano::Configuration.instance(:must_exist).load do
           end
           
         end
-     
+      
+        desc "Install some useful network utils"
         task :net do
-          apps = %w(lynx nmap netcat
-                    vim-full)
+          apps = %w(lynx nmap netcat telnet dnsutils rsync curl wget)
           apt.install( {:base => apps}, :stable )
+        end
+        
+        desc "Install some useful mail utils"
+        task :mail do
+          apps = %w(mailx mutt)
+          apt.install( {:base => apps}, :stable )
+        end
+        
+        desc "Install some useful utils"
+        task :other do
+          apps = %w(vim-full tree)
+          apt.install( {:base => apps}, :stable )
+        end
+        
+        desc "Install handy utils"
+        task :handy do
+          net
+          mail
+          other
         end
         
     end 

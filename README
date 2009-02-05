@@ -2,6 +2,35 @@
 deprec - Deployment Recipes for Capistrano
 ------------------------------------------
 
+== Update 28 Jan 2009
+
+Get your app running on a fresh Ubuntu (7.10, 8.04.1) server these commands:
+
+    cd your_rails_app
+    depify . 
+    # Edit config/deploy.rb
+    cap deprec:rails:install_stack
+
+	# WARNING! Don't run the following command if you are using a shared 
+	# database server that has already been installed.
+	cap deprec:db:install 
+
+    cap deploy:setup 
+    cap deploy 
+    cap deploy:migrate
+
+Recorded times for complete install on Ubuntu hardy server (7.10 amd64)
+
+	* Passenger+REE+Apache        : 14m29s
+	* Passenger+ruby-1.8.7+Apache : 17m51s
+	* nginx+mongrel               : 16m25s
+	
+Note you can choose combinations of:
+	
+	* Ruby Enterprise Edition or ruby-1.8.7
+	* Passenger or mongrel (passenger requires apache option)
+	* Apache or nginx
+
 == Introduction
 
 The deprec [1] gem is a set of tasks for Capistrano [2]. These tasks provide
@@ -134,5 +163,3 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 [3] http://www.ruby-lang.org/en/
 [4] http://rubyforge.org/
 [5] http://rubygems.org/
-
-test

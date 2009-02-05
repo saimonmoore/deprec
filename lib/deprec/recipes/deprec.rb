@@ -26,37 +26,41 @@ Capistrano::Configuration.instance(:must_exist).load do
   SRC_PACKAGES = {}
   
   # Server options
+  CHOICES_RUBY_VM   = [:mri, :ree]
   CHOICES_WEBSERVER = [:nginx, :apache, :none]
-  CHOICES_APPSERVER = [:mongrel, :webrick, :none]
-  CHOICES_DATABASE  = [:mysql, :postgres, :none]
+  CHOICES_APPSERVER = [:mongrel, :webrick, :passenger, :none]
+  CHOICES_DATABASE  = [:mysql, :postgresql, :sqlite, :none]
   
-  
-  # Server defaults
-  default :web_server_type, :apache
+  # Service defaults
+  #
+  # The defaults below are legacy values to support older deployments.
+  # Newly generated deploy.rb files have use apache, passenger and ree 
+  default :ruby_vm_type,    :mri
+  default :web_server_type, :nginx
   default :app_server_type, :mongrel
   default :db_server_type,  :mysql
+  #
+  # default(:web_server_type) do
+  #   Capistrano::CLI.ui.choose do |menu| 
+  #     CHOICES_WEBSERVER.each {|c| menu.choice(c)}
+  #     menu.header = "select webserver type"
+  #   end
+  # end
+  # 
+  # default(:app_server_type) do
+  #   Capistrano::CLI.ui.choose do |menu| 
+  #     CHOICES_APPSERVER.each {|c| menu.choice(c)}
+  #     menu.header = "select application server type"
+  #   end
+  # end
+  # 
+  # default(:db_server_type) do
+  #   Capistrano::CLI.ui.choose do |menu| 
+  #     CHOICES_DATABASE.each {|c| menu.choice(c)}
+  #     menu.header = "select database server type"
+  #   end
+  # end
 
-  default(:web_server_type) do
-    Capistrano::CLI.ui.choose do |menu| 
-      CHOICES_WEBSERVER.each {|c| menu.choice(c)}
-      menu.header = "select webserver type"
-    end
-  end
-
-  default(:app_server_type) do
-    Capistrano::CLI.ui.choose do |menu| 
-      CHOICES_APPSERVER.each {|c| menu.choice(c)}
-      menu.header = "select application server type"
-    end
-  end
-
-  default(:db_server_type) do
-    Capistrano::CLI.ui.choose do |menu| 
-      CHOICES_DATABASE.each {|c| menu.choice(c)}
-      menu.header = "select database server type"
-    end
-  end
-  
   default(:application) do
     Capistrano::CLI.ui.ask "enter name of project(no spaces)" do |q|
       q.validate = /^[0-9a-z_]*$/
@@ -98,19 +102,26 @@ Capistrano::Configuration.instance(:must_exist).load do
   default(:web_server_aliases) { domain.match(/^www/) ? [] : ["www.#{domain}"] }    
 
   # XXX for some reason this is causing "before deprec:rails:install" to be executed twice
-  # on :load, 'deprec:connect_canonical_tasks' 
+  on :load, 'deprec:connect_canonical_tasks' 
 
   namespace :deprec do
-
-    task :connect_canonical_tasks, :hosts => 'localhost' do      
+    
+    task :connect_canonical_tasks do      
       # link application specific recipes into canonical task names
       # e.g. deprec:web:restart => deprec:nginx:restart 
-      metaclass = class << self; self; end
-      [:web, :app, :db].each do |server|
-        server_type = send("#{server}_server_type")
+      
+      
+      namespaces_to_connect = { :web => :web_server_type,
+                                :app => :app_server_type,
+                                :db  => :db_server_type,
+                                :ruby => :ruby_vm_type
+                              }
+      metaclass = class << self; self; end # XXX unnecessary?
+      namespaces_to_connect.each do |server, choice|
+        server_type = send(choice).to_sym
         if server_type != :none
-          metaclass.send(:define_method, server) { namespaces[server] }
-          self.namespaces[server] = deprec.send(server_type)
+          metaclass.send(:define_method, server) { namespaces[server] } # XXX unnecessary?
+          namespaces[server] = deprec.send(server_type)          
         end
       end
     end

@@ -10,17 +10,8 @@ Capistrano::Configuration.instance(:must_exist).load do
       set :git_root, '/var/git'
 
       SRC_PACKAGES[:git] = {
-        :filename => 'git-1.5.5.4.tar.gz',   
-        :md5sum => "8255894042c8a6db07227475b8b4622f  git-1.5.5.4.tar.gz", 
-        :dir => 'git-1.5.5.4',  
-        :url => "http://kernel.org/pub/software/scm/git/git-1.5.5.4.tar.gz",
-        :unpack => "tar zxf git-1.5.5.4.tar.gz;",
-        :configure => %w(
-        ./configure
-        ;
-        ).reject{|arg| arg.match '#'}.join(' '),
-        :make => 'make;',
-        :install => 'make install;'
+        :url => "http://kernel.org/pub/software/scm/git/git-1.6.1.tar.gz",
+        :md5sum => "1f915929d4f54a2e0449a4a08f093118  git-1.6.1.tar.gz"
       }
 
       desc "Install git"
@@ -34,7 +25,7 @@ Capistrano::Configuration.instance(:must_exist).load do
 
       # install dependencies for nginx
       task :install_deps do
-        apt.install( {:base => %w(zlib1g-dev gettext)}, :stable )
+        apt.install( {:base => %w(zlib1g-dev gettext libcurl4-gnutls-dev)}, :stable )
       end
       
       # "Start git server in local directory"
