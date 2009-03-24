@@ -12,35 +12,35 @@ Capistrano::Configuration.instance(:must_exist).load do
   set :shared_dirs, nil # Array of directories that should be created under shared/
                         # and linked to in the project
 
-  # Hook into the default capistrano deploy tasks
-  before 'deploy:setup', :except => { :no_release => true } do
-    top.deprec.rails.setup_user_perms
-    top.deprec.rails.create_app_user_and_group
-    top.deprec.rails.setup_paths
-    top.deprec.rails.setup_shared_dirs
-    top.deprec.rails.install_gems_for_project
-  end
-
-  after 'deploy:setup', :except => { :no_release => true } do
-    top.deprec.rails.create_config_dir
-    top.deprec.rails.config_gen
-    top.deprec.rails.config
-    top.deprec.rails.activate_services
-    top.deprec.rails.set_perms_on_shared_and_releases
-    top.deprec.web.reload
-    top.deprec.rails.setup_database
-  end
-
-  after 'deploy:symlink', :roles => :app do
-    top.deprec.rails.symlink_shared_dirs
-    top.deprec.rails.symlink_database_yml unless database_yml_in_scm
-    top.deprec.rails.make_writable_by_app
-    set_owner_of_environment_rb if web_server_type.to_s == 'passenger'
-  end
-
-  after :deploy, :roles => :app do
-    deploy.cleanup
-  end
+  # # Hook into the default capistrano deploy tasks
+  # before 'deploy:setup', :except => { :no_release => true } do
+  #   top.deprec.rails.setup_user_perms
+  #   top.deprec.rails.create_app_user_and_group
+  #   top.deprec.rails.setup_paths
+  #   top.deprec.rails.setup_shared_dirs
+  #   top.deprec.rails.install_gems_for_project
+  # end
+  # 
+  # after 'deploy:setup', :except => { :no_release => true } do
+  #   top.deprec.rails.create_config_dir
+  #   top.deprec.rails.config_gen
+  #   top.deprec.rails.config
+  #   top.deprec.rails.activate_services
+  #   top.deprec.rails.set_perms_on_shared_and_releases
+  #   top.deprec.web.reload
+  #   top.deprec.rails.setup_database
+  # end
+  # 
+  # after 'deploy:symlink', :roles => :app do
+  #   top.deprec.rails.symlink_shared_dirs
+  #   top.deprec.rails.symlink_database_yml unless database_yml_in_scm
+  #   top.deprec.rails.make_writable_by_app
+  #   set_owner_of_environment_rb if web_server_type.to_s == 'passenger'
+  # end
+  # 
+  # after :deploy, :roles => :app do
+  #   deploy.cleanup
+  # end
 
   namespace :deprec do
     namespace :rails do
