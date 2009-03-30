@@ -1,5 +1,11 @@
 == git
  
+== 1.99.34 (March 30, 2009)
+
+Don't automatically assume we use deprec with a rails app.
+
+* Any project that wants the before/after hooks has to add them manually to their deploy.rb
+
 == 1.99.33 (February  5, 2009)
 
 # Added options for :web, :app, :db and :ruby software to install/use.
